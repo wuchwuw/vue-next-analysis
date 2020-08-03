@@ -1,0 +1,15 @@
+{
+  "name": "vue-next-analysis",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/wuchwuw/vue-next-analysis.git",
+  "author": "吴翀 <wuchyuz@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "vuepress": "^1.5.2"
+  },
+  "scripts": {
+    "docs:dev": "vuepress dev docs",
+    "docs:build": "vuepress build docs"
+  }
+}
