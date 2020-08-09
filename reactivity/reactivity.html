@@ -3,15 +3,78 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>hello reactivity | vue-next-analysis</title>
+    <title>Vue/Reactivity | VueNextAnalysis</title>
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.a75564c4.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/7.f723f974.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.5b53c64b.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.fa538e24.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.4a5f87cf.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.6f6d2810.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.8f44651e.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.d710962c.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
-    <div id="app" data-server-rendered="true"><div class="theme-container no-sidebar"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">vue-next-analysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <!----> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="hello-reactivity"><a href="#hello-reactivity" class="header-anchor">#</a> hello reactivity</h2></div> <footer class="page-edit"><!----> <!----></footer> <!----> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.a75564c4.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/7.f723f974.js" defer></script>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" aria-current="page" class="active sidebar-link">reactive</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#vue-reactivity" class="sidebar-link">Vue/Reactivity</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="vue-reactivity"><a href="#vue-reactivity" class="header-anchor">#</a> Vue/Reactivity</h2> <p>reactive api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截普通的对象的操作，并由此收集依赖或派发更新。
+响应式对象的实现并没有那么复杂，只需记住响应式对象就是Proxy对象，它的核心就是Proxy，在Vue3.x中，响应式对象也分为了以下几种:</p> <p>1、mutable reactive: 普通的响应式对象
+2、readonly reactive: 只读的响应式对象，不能进行赋值操作。
+3、shallow reactive: 只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行递归响应式化。
+4、shallow readonly reactive: 只读的shallow reactive对象</p> <p>reactive api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例
+来了解reactive以及它相关api的用法，这对我们学习源码很有帮助，毕竟学习原理之前也要先会用才行。</p> <h4 id="测试用例"><a href="#测试用例" class="header-anchor">#</a> 测试用例</h4> <p>1、reactive的参数必须是一个对象，我们可以像操作一个普通对象一样来操作响应式对象，并且响应式对象不等于原始的对象。</p> <div class="language- extra-class"><pre><code>test('Object', () =&gt; {
+  const original = { foo: 1 }
+  const observed = reactive(original)
+  expect(observed).not.toBe(original)
+  expect(isReactive(observed)).toBe(true)
+  expect(isReactive(original)).toBe(false)
+  // get
+  expect(observed.foo).toBe(1)
+  // has
+  expect('foo' in observed).toBe(true)
+  // ownKeys
+  expect(Object.keys(observed)).toEqual(['foo'])
+})
+</code></pre></div><p>2、一个响应式对象的属性的值如果也是对象的话，那么它也会被响应式化。</p> <div class="language- extra-class"><pre><code>test('nested reactives', () =&gt; {
+  const original = {
+    nested: {
+      foo: 1
+    },
+    array: [{ bar: 2 }]
+  }
+  const observed = reactive(original)
+  expect(isReactive(observed.nested)).toBe(true)
+  expect(isReactive(observed.array)).toBe(true)
+  expect(isReactive(observed.array[0])).toBe(true)
+})
+</code></pre></div><p>3、对一个响应式对象进行操作时，操作同时也会影响到原始的对象。</p> <div class="language- extra-class"><pre><code>test('observed value should proxy mutations to original (Object)', () =&gt; {
+  const original: any = { foo: 1 }
+  const observed = reactive(original)
+  // set
+  observed.bar = 1
+  expect(observed.bar).toBe(1)
+  expect(original.bar).toBe(1)
+  // delete
+  delete observed.foo
+  expect('foo' in observed).toBe(false)
+  expect('foo' in original).toBe(false)
+})
+</code></pre></div><p>4、为一个响应式对象的属性赋值一个对象时，该对象也会变成响应式对象。</p> <div class="language- extra-class"><pre><code>test('setting a property with an unobserved value should wrap with reactive', () =&gt; {
+  const observed = reactive&lt;{ foo?: object }&gt;({})
+  const raw = {}
+  observed.foo = raw
+  expect(observed.foo).not.toBe(raw)
+  expect(isReactive(observed.foo)).toBe(true)
+})
+</code></pre></div><p>5、当传入的参数已经是一个响应式对象时，直接返回该响应式对象。</p> <div class="language- extra-class"><pre><code>test('observing already observed value should return same Proxy', () =&gt; {
+  const original = { foo: 1 }
+  const observed = reactive(original)
+  const observed2 = reactive(observed)
+  expect(observed2).toBe(observed)
+})
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/vue-next-analysis/" class="prev router-link-active">
+        写在前面
+      </a></span> <span class="next"><a href="/vue-next-analysis/reactivity/ref.html">
+        ref
+      </a>
+      →
+    </span></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/vue-next-analysis/assets/js/app.8f44651e.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.d710962c.js" defer></script>
   </body>
 </html>
