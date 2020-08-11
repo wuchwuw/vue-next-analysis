@@ -1,16 +1,16 @@
-## Vue/Reactivity
+## reactive
 
 Reactivity Api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截对象的操作，并由此收集依赖或派发更新。
 Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api创建的对象都是Proxy对象，它的核心api有以下几个:
 
 1、reactive: 返回原始对象的Proxy代理对象，支持收集依赖和派发更新，访问自身属性时会执行嵌套对象的深度响应式转换。
-2、shallow reactive: 返回原始对象的Proxy代理对象，但只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行响应式转换。
+2、shallowReactive: 返回原始对象的Proxy代理对象，但只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行响应式转换。
 3、readonly: 返回原始对象的Proxy代理对象，限制赋值操作，访问它的任何嵌套属性也将是只读的。
-4、shallow readonly: 返回原始对象的Proxy代理对象，只限制对象根层级的属性的set操作，但不执行嵌套对象的深度只读转换。
+4、shallowReadonly: 返回原始对象的Proxy代理对象，只限制对象根层级的属性的set操作，但不执行嵌套对象的深度只读转换。
 
 Reactivity api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。
 
-## 相关源码
+### 相关源码
 
 ``` js
 // 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能是
@@ -193,5 +193,25 @@ function createReactiveObject(
 }
 ```
 
-
 ## baseHandlers
+
+当传入Reactivity Api的原始对象的类型是Object或者Array时，创建Proxy对象时传入的handlers为baseHandlers，
+根据api不同，传入的baseHandlers也分为以下几种:
+
+1、传入reactive api的mutableHandlers
+2、传入shallowReactive api的shallowReactiveHandlers
+3、传入readonly api的readonlyHandlers
+4、传入shallowReadonly api的shallowReadonlyHandlers
+
+baseHandles的代码存放在packages/src/reactivity/baseHandlers.ts中
+
+### 相关源码
+
+```js
+// 遍历对象的所有内建Symbol
+const builtInSymbols = new Set(
+  Object.getOwnPropertyNames(Symbol)
+    .map(key => (Symbol as any)[key])
+    .filter(isSymbol)
+)
+```
