@@ -7,211 +7,183 @@
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.3840a22d.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.d0683ae6.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.cbfb20a8.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.0d79c75c.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
-    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" aria-current="page" class="active sidebar-link">reactive</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#vue-reactivity" class="sidebar-link">Vue/Reactivity</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#相关源码" class="sidebar-link">相关源码</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="vue-reactivity"><a href="#vue-reactivity" class="header-anchor">#</a> Vue/Reactivity</h2> <p>reactive api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截普通的对象的操作，并由此收集依赖或派发更新。
-响应式对象的实现并没有那么复杂，只需记住响应式对象就是Proxy对象，它的核心就是Proxy，在Vue3.x中，响应式对象也分为了以下几种:</p> <p>1、mutable reactive: 普通的响应式对象
-2、readonly reactive: 只读的响应式对象，不能进行赋值操作。
-3、shallow reactive: 只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行递归响应式化。
-4、shallow readonly reactive: 只读的shallow reactive对象</p> <p>reactive api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。</p> <h4 id="测试用例"><a href="#测试用例" class="header-anchor">#</a> 测试用例</h4> <p>1、reactive的参数必须是一个对象，我们可以像操作一个普通对象一样来操作响应式对象，并且响应式对象不等于原始的对象。</p> <div class="language- extra-class"><pre><code>test('Object', () =&gt; {
-  const original = { foo: 1 }
-  const observed = reactive(original)
-  expect(observed).not.toBe(original)
-  expect(isReactive(observed)).toBe(true)
-  expect(isReactive(original)).toBe(false)
-  // get
-  expect(observed.foo).toBe(1)
-  // has
-  expect('foo' in observed).toBe(true)
-  // ownKeys
-  expect(Object.keys(observed)).toEqual(['foo'])
-})
-</code></pre></div><p>2、一个响应式对象的属性的值如果也是对象的话，那么它也会被响应式化。</p> <div class="language- extra-class"><pre><code>test('nested reactives', () =&gt; {
-  const original = {
-    nested: {
-      foo: 1
-    },
-    array: [{ bar: 2 }]
-  }
-  const observed = reactive(original)
-  expect(isReactive(observed.nested)).toBe(true)
-  expect(isReactive(observed.array)).toBe(true)
-  expect(isReactive(observed.array[0])).toBe(true)
-})
-</code></pre></div><p>3、对一个响应式对象进行操作时，操作同时也会影响到原始的对象。</p> <div class="language- extra-class"><pre><code>test('observed value should proxy mutations to original (Object)', () =&gt; {
-  const original: any = { foo: 1 }
-  const observed = reactive(original)
-  // set
-  observed.bar = 1
-  expect(observed.bar).toBe(1)
-  expect(original.bar).toBe(1)
-  // delete
-  delete observed.foo
-  expect('foo' in observed).toBe(false)
-  expect('foo' in original).toBe(false)
-})
-</code></pre></div><p>4、为一个响应式对象的属性赋值一个对象时，该对象也会变成响应式对象。</p> <div class="language- extra-class"><pre><code>test('setting a property with an unobserved value should wrap with reactive', () =&gt; {
-  const observed = reactive&lt;{ foo?: object }&gt;({})
-  const raw = {}
-  observed.foo = raw
-  expect(observed.foo).not.toBe(raw)
-  expect(isReactive(observed.foo)).toBe(true)
-})
-</code></pre></div><p>5、当传入的参数已经是一个响应式对象时，直接返回该响应式对象。</p> <div class="language- extra-class"><pre><code>test('observing already observed value should return same Proxy', () =&gt; {
-  const original = { foo: 1 }
-  const observed = reactive(original)
-  const observed2 = reactive(observed)
-  expect(observed2).toBe(observed)
-})
-</code></pre></div><h2 id="相关源码"><a href="#相关源码" class="header-anchor">#</a> 相关源码</h2> <div class="language- extra-class"><pre><code>// 定义了传入Proxy的原始对象target的类型，在原始对象响应式化的过程中会往原始对象上添加某些标记属性
-// 通过ReactiveFlags枚举了这些属性的名字，它们的功能如下:
-// SKIP: 存在此属性则跳过响应式化
-// IS_REACTIVE: 是否是一个响应式对象
-// IS_READONLY: 是否是一个只读的响应式对象
-// RAW: 当target是一个响应式对象时，通过此属性获得响应式对象的原始对象
-// REACTIVE: 如果是一个响应式对象则将响应式后的Proxy对象存放在这个属性上
-// READONLY: 如果是一个只读的响应式对象则将响应式后的Proxy对象存放在这个属性上
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" aria-current="page" class="active sidebar-link">reactive</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#vue-reactivity" class="sidebar-link">Vue/Reactivity</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#相关源码" class="sidebar-link">相关源码</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#basehandlers" class="sidebar-link">baseHandlers</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="vue-reactivity"><a href="#vue-reactivity" class="header-anchor">#</a> Vue/Reactivity</h2> <p>Reactivity Api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截对象的操作，并由此收集依赖或派发更新。
+Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api创建的对象都是Proxy对象，它的核心api有以下几个:</p> <p>1、reactive: 返回原始对象的Proxy代理对象，支持收集依赖和派发更新，访问自身属性时会执行嵌套对象的深度响应式转换。
+2、shallow reactive: 返回原始对象的Proxy代理对象，但只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行响应式转换。
+3、readonly: 返回原始对象的Proxy代理对象，限制赋值操作，访问它的任何嵌套属性也将是只读的。
+4、shallow readonly: 返回原始对象的Proxy代理对象，只限制对象根层级的属性的set操作，但不执行嵌套对象的深度只读转换。</p> <p>Reactivity api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。</p> <h2 id="相关源码"><a href="#相关源码" class="header-anchor">#</a> 相关源码</h2> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能是</span>
+<span class="token comment">// reactive对象或者readonly对象，那么就需要一些属性来判断target的类型</span>
+<span class="token comment">// 通过ReactiveFlags枚举了这些属性的名字，它们的含义如下:</span>
+<span class="token comment">// SKIP: 当原始对象target存在此属性则跳过只读或者响应式化</span>
+<span class="token comment">// IS_REACTIVE: 当此属性为true时，则target已经是一个reactive对象</span>
+<span class="token comment">// IS_READONLY: 当此属性为true时，则target已经是一个readonly对象</span>
+<span class="token comment">// RAW: 当target是一个reactive或者readonly对象时，通过此属性获得原始对象的值</span>
+<span class="token comment">// REACTIVE: 当原始对象target是一个普通对象，但是它已经被响应式化过了，通过此属性可获得target的响应式对象</span>
+<span class="token comment">// READONLY: 当原始对象target是一个普通对象，但是它已经被只读化过了，通过此属性可获得target的只读对象</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token keyword">enum</span> ReactiveFlags <span class="token punctuation">{</span>
+  <span class="token constant">SKIP</span> <span class="token operator">=</span> <span class="token string">'__v_skip'</span><span class="token punctuation">,</span>
+  <span class="token constant">IS_REACTIVE</span> <span class="token operator">=</span> <span class="token string">'__v_isReactive'</span><span class="token punctuation">,</span>
+  <span class="token constant">IS_READONLY</span> <span class="token operator">=</span> <span class="token string">'__v_isReadonly'</span><span class="token punctuation">,</span>
+  <span class="token constant">RAW</span> <span class="token operator">=</span> <span class="token string">'__v_raw'</span><span class="token punctuation">,</span>
+  <span class="token constant">REACTIVE</span> <span class="token operator">=</span> <span class="token string">'__v_reactive'</span><span class="token punctuation">,</span>
+  <span class="token constant">READONLY</span> <span class="token operator">=</span> <span class="token string">'__v_readonly'</span>
+<span class="token punctuation">}</span>
 
-export const enum ReactiveFlags {
-  SKIP = '__v_skip',
-  IS_REACTIVE = '__v_isReactive',
-  IS_READONLY = '__v_isReadonly',
-  RAW = '__v_raw',
-  REACTIVE = '__v_reactive',
-  READONLY = '__v_readonly'
-}
+<span class="token keyword">interface</span> <span class="token class-name">Target</span> <span class="token punctuation">{</span>
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">SKIP</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> boolean
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_REACTIVE</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> boolean
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_READONLY</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> boolean
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">RAW</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> any
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">REACTIVE</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> any
+  <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">READONLY</span><span class="token punctuation">]</span><span class="token operator">?</span><span class="token operator">:</span> any
+<span class="token punctuation">}</span>
 
-interface Target {
-  [ReactiveFlags.SKIP]?: boolean
-  [ReactiveFlags.IS_REACTIVE]?: boolean
-  [ReactiveFlags.IS_READONLY]?: boolean
-  [ReactiveFlags.RAW]?: any
-  [ReactiveFlags.REACTIVE]?: any
-  [ReactiveFlags.READONLY]?: any
-}
+<span class="token comment">// isObservableType存放了可以响应式化的对象的类型</span>
+<span class="token comment">// 其中又区分了collectionTypes，它们的实现与普通的Object和Array不同，后面我们会细说</span>
 
-// isObservableType存放了可以响应式化的对象的类型
-// 其中又区分了collectionTypes，它们的实现与普通的Object和Array不同，后面我们会细说
+<span class="token keyword">const</span> collectionTypes <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Set</span><span class="token operator">&lt;</span>Function<span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token punctuation">[</span>Set<span class="token punctuation">,</span> Map<span class="token punctuation">,</span> WeakMap<span class="token punctuation">,</span> WeakSet<span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">const</span> isObservableType <span class="token operator">=</span> <span class="token comment">/*#__PURE__*/</span> <span class="token function">makeMap</span><span class="token punctuation">(</span>
+  <span class="token string">'Object,Array,Map,Set,WeakMap,WeakSet'</span>
+<span class="token punctuation">)</span>
 
-const collectionTypes = new Set&lt;Function&gt;([Set, Map, WeakMap, WeakSet])
-const isObservableType = /*#__PURE__*/ makeMap(
-  'Object,Array,Map,Set,WeakMap,WeakSet'
-)
+<span class="token comment">// 通过canObserve来判断一个对象是否能被响应式化，成为响应式对象必须满足以下条件:</span>
+<span class="token comment">// 1、对象上不存在ReactiveFlags.SKIP属性</span>
+<span class="token comment">// 2、它的类型必须是Object,Array,Map,Set,WeakMap,WeakSet中的一种</span>
+<span class="token comment">// 3、对象没有被冻结</span>
+<span class="token keyword">const</span> canObserve <span class="token operator">=</span> <span class="token punctuation">(</span>value<span class="token operator">:</span> Target<span class="token punctuation">)</span><span class="token operator">:</span> <span class="token parameter">boolean</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span>
+    <span class="token operator">!</span>value<span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">SKIP</span><span class="token punctuation">]</span> <span class="token operator">&amp;&amp;</span>
+    <span class="token function">isObservableType</span><span class="token punctuation">(</span><span class="token function">toRawType</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+    <span class="token operator">!</span>Object<span class="token punctuation">.</span><span class="token function">isFrozen</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>接下来是几个创建响应式对象的api,这里重点注意创建不同类型的响应式对象的api返回的类型不同，关于类型的详细解析我们放到后面细讲。</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 通过reactive方法创建普通的mutable reactive，如果传入的对象上存在ReactiveFlags.IS_READONLY属性</span>
+<span class="token comment">// 也就是说它已经是一个只读的响应式对象，则直接返回，否则</span>
+<span class="token comment">// 通过调用createReactiveObject方法来创建响应式对象</span>
+<span class="token comment">// 这里要注意的是reactive方法返回的类型是UnwrapNestedRefs&lt;T&gt;，</span>
 
-// 通过canObserve来判断一个对象是否能被响应式化，成为响应式对象必须满足以下条件:
-// 1、对象上不存在ReactiveFlags.SKIP属性
-// 2、它的类型必须是Object,Array,Map,Set,WeakMap,WeakSet中的一种
-// 3、对象不应该被冻结
-const canObserve = (value: Target): boolean =&gt; {
-  return (
-    !value[ReactiveFlags.SKIP] &amp;&amp;
-    isObservableType(toRawType(value)) &amp;&amp;
-    !Object.isFrozen(value)
-  )
-}
-</code></pre></div><p>接下来是几个创建响应式对象的api,这里重点注意创建不同类型的响应式对象的api返回的类型不同，关于类型的详细解析我们放到后面细讲。</p> <div class="language- extra-class"><pre><code>// 通过reactive方法创建普通mutable reactive，如果传入的对象上存在ReactiveFlags.IS_READONLY属性
-// 也就是说它已经是一个只读的响应式对象，则直接返回，否则
-// 通过调用createReactiveObject方法来创建响应式对象
-// 这里要注意的是reactive方法返回的类型是UnwrapNestedRefs&lt;T&gt;，
-
-export function reactive&lt;T extends object&gt;(target: T): UnwrapNestedRefs&lt;T&gt;
-export function reactive(target: object) {
-  // if trying to observe a readonly proxy, return the readonly version.
-  if (target &amp;&amp; (target as Target)[ReactiveFlags.IS_READONLY]) {
-    return target
-  }
-  return createReactiveObject(
-    target,
-    false,
-    mutableHandlers,
+<span class="token keyword">export</span> <span class="token keyword">function</span> reactive<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>target<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> UnwrapNestedRefs<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">reactive</span><span class="token punctuation">(</span><span class="token parameter">target<span class="token operator">:</span> object</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// if trying to observe a readonly proxy, return the readonly version.</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>target <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>target <span class="token keyword">as</span> Target<span class="token punctuation">)</span><span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_READONLY</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> target
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
+    target<span class="token punctuation">,</span>
+    <span class="token boolean">false</span><span class="token punctuation">,</span>
+    mutableHandlers<span class="token punctuation">,</span>
     mutableCollectionHandlers
-  )
-}
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
 
-// 通过shallowReactive方法创建一个shallow reactive，我们已经在前面介绍过它
-// 可以看到shallowReactive方法返回的类型和传入的类型T是一致的
-export function shallowReactive&lt;T extends object&gt;(target: T): T {
-  return createReactiveObject(
-    target,
-    false,
-    shallowReactiveHandlers,
+<span class="token comment">// 通过shallowReactive方法创建一个shallow reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 可以看到shallowReactive方法返回的类型和传入的类型T是一致的</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> shallowReactive<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>target<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token constant">T</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
+    target<span class="token punctuation">,</span>
+    <span class="token boolean">false</span><span class="token punctuation">,</span>
+    shallowReactiveHandlers<span class="token punctuation">,</span>
     shallowCollectionHandlers
-  )
-}
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
 
-// 通过readonly方法创建一个readonly reactive，我们已经在前面介绍过它
-// 可以看到readonly方法返回的类型是DeepReadonly&lt;UnwrapNestedRefs&lt;T&gt;&gt;
-export function readonly&lt;T extends object&gt;(
-  target: T
-): DeepReadonly&lt;UnwrapNestedRefs&lt;T&gt;&gt; {
-  return createReactiveObject(
-    target,
-    true,
-    readonlyHandlers,
+<span class="token comment">// 通过readonly方法创建一个readonly reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 可以看到readonly方法返回的类型是DeepReadonly&lt;UnwrapNestedRefs&lt;T&gt;&gt;</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> readonly<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  target<span class="token operator">:</span> <span class="token constant">T</span>
+<span class="token punctuation">)</span><span class="token operator">:</span> DeepReadonly<span class="token operator">&lt;</span>UnwrapNestedRefs<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
+    target<span class="token punctuation">,</span>
+    <span class="token boolean">true</span><span class="token punctuation">,</span>
+    readonlyHandlers<span class="token punctuation">,</span>
     readonlyCollectionHandlers
-  )
-}
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
 
-// 通过shallowReadonly方法创建一个readonly shallow reactive，我们已经在前面介绍过它
-// 可以看到shallowReadonly方法返回的类型是Readonly&lt;{ [K in keyof T]: UnwrapNestedRefs&lt;T[K]&gt; }&gt;
-export function shallowReadonly&lt;T extends object&gt;(
-  target: T
-): Readonly&lt;{ [K in keyof T]: UnwrapNestedRefs&lt;T[K]&gt; }&gt; {
-  return createReactiveObject(
-    target,
-    true,
-    shallowReadonlyHandlers,
+<span class="token comment">// 通过shallowReadonly方法创建一个readonly shallow reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 可以看到shallowReadonly方法返回的类型是Readonly&lt;{ [K in keyof T]: UnwrapNestedRefs&lt;T[K]&gt; }&gt;</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> shallowReadonly<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  target<span class="token operator">:</span> <span class="token constant">T</span>
+<span class="token punctuation">)</span><span class="token operator">:</span> Readonly<span class="token operator">&lt;</span><span class="token punctuation">{</span> <span class="token punctuation">[</span><span class="token constant">K</span> <span class="token keyword">in</span> keyof <span class="token constant">T</span><span class="token punctuation">]</span><span class="token operator">:</span> UnwrapNestedRefs<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token punctuation">[</span><span class="token constant">K</span><span class="token punctuation">]</span><span class="token operator">&gt;</span> <span class="token punctuation">}</span><span class="token operator">&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
+    target<span class="token punctuation">,</span>
+    <span class="token boolean">true</span><span class="token punctuation">,</span>
+    shallowReadonlyHandlers<span class="token punctuation">,</span>
     readonlyCollectionHandlers
-  )
-}
-</code></pre></div><p>不难看出以上的几个主要创建响应式对象的api都是内部调用了createReactiveObject方法，根据传入的参数不同来创建不同类型的响应式对象。</p> <div class="language- extra-class"><pre><code>// 可以看到createReactiveObject方法传入了4个参数
-// target: 传入的将要响应式化的对象
-// isReadonly: 是否创建只读的响应式对象
-// baseHandlers: 普通的Object和Array的proxy handles对象
-// collectionHandlers: Map、Weakmap、Set、Weakset类型的proxy handles对象
-function createReactiveObject(
-  target: Target,
-  isReadonly: boolean,
-  baseHandlers: ProxyHandler&lt;any&gt;,
-  collectionHandlers: ProxyHandler&lt;any&gt;
-) {
-  // 在开发环境中，如果传入的target不是对象，则发出警告并直接返回传入的target
-  if (!isObject(target)) {
-    if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
-    }
-    return target
-  }
-  // target is already a Proxy, return it.
-  // exception: calling readonly() on a reactive object
-  // 当可以获取target上的ReactiveFlags.RAW属性的值，则证明target已经是一个响应式对象
-  
-  if (
-    target[ReactiveFlags.RAW] &amp;&amp;
-    !(isReadonly &amp;&amp; target[ReactiveFlags.IS_REACTIVE])
-  ) {
-    return target
-  }
-  // target already has corresponding Proxy
-  const reactiveFlag = isReadonly
-    ? ReactiveFlags.READONLY
-    : ReactiveFlags.REACTIVE
-  if (hasOwn(target, reactiveFlag)) {
-    return target[reactiveFlag]
-  }
-  // only a whitelist of value types can be observed.
-  if (!canObserve(target)) {
-    return target
-  }
-  const observed = new Proxy(
-    target,
-    collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
-  )
-  def(target, reactiveFlag, observed)
-  return observed
-}</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>不难看出以上的几个主要创建响应式对象的api都是内部调用了createReactiveObject方法，根据传入的参数不同来创建不同类型的响应式对象。</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 可以看到createReactiveObject方法传入了4个参数</span>
+<span class="token comment">// target: 传入的将要响应式化的原始对象，它可能是一个响应式对象也可能是普通对象</span>
+<span class="token comment">// isReadonly: 是否创建只读的响应式对象</span>
+<span class="token comment">// baseHandlers: 普通的Object和Array的proxy handles对象</span>
+<span class="token comment">// collectionHandlers: Map、Weakmap、Set、Weakset类型的proxy handles对象</span>
+<span class="token comment">// 后面我们会详细分析不同类型的响应式对象的baseHandlers和collectionHandlers的实现</span>
+<span class="token keyword">function</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
+  <span class="token parameter">target<span class="token operator">:</span> Target<span class="token punctuation">,</span>
+  isReadonly<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+  baseHandlers<span class="token operator">:</span> ProxyHandler<span class="token operator">&lt;</span>any<span class="token operator">&gt;</span><span class="token punctuation">,</span>
+  collectionHandlers<span class="token operator">:</span> ProxyHandler<span class="token operator">&lt;</span>any<span class="token operator">&gt;</span></span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 在开发环境中，如果传入的target不是对象，则发出警告并直接返回传入的target</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">isObject</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      console<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">value cannot be made reactive: </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">String</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> target
+  <span class="token punctuation">}</span>
+
+  <span class="token comment">// 当target上的ReactiveFlags.RAW属性的值存在，则证明target已经是一个reactive或者readonly对象</span>
+  <span class="token comment">// 那么当除了isReadonly为true并且target上的ReactiveFlags.IS_REACTIVE属性存在值时，都应该直接返回target</span>
+  <span class="token comment">// 意思就是说满足以下情况时都应该直接返回传入的target对象，也就是b === a</span>
+  <span class="token comment">// const a = reactive({})</span>
+  <span class="token comment">// const b = reactive(a)</span>
+  <span class="token comment">// 或</span>
+  <span class="token comment">// const a = readonly({})</span>
+  <span class="token comment">// const b = readonly(a)</span>
+  <span class="token comment">// 或</span>
+  <span class="token comment">// const a = readonly({})</span>
+  <span class="token comment">// const b = reactive(a)</span>
+  <span class="token comment">// 除了以下情况将一个reactive对象传入readonly api</span>
+  <span class="token comment">// const a = reactive({a: 1})</span>
+  <span class="token comment">// const b = readonly(a)</span>
+  <span class="token comment">// 此时会将proxy a作为target来创建proxy b</span>
+  <span class="token comment">// 这样当我们收集了b.a作为依赖时，就可以通过修改a.a的值来派发更新，这样作为只读对象的b也可以当做一个响应式对象来使用</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>
+    target<span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">RAW</span><span class="token punctuation">]</span> <span class="token operator">&amp;&amp;</span>
+    <span class="token operator">!</span><span class="token punctuation">(</span>isReadonly <span class="token operator">&amp;&amp;</span> target<span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_REACTIVE</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+  <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> target
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 如果target已经响应式或者只读化过(这里注意和上面条件的区别)，那么target上应该存在</span>
+  <span class="token comment">// ReactiveFlags.READONLY或者ReactiveFlags.REACTIVE属性的值，如果存在直接返回属性的值</span>
+  <span class="token comment">// 也就是说多次传入origin，都应该返回同一reactive对象，也就是b === a</span>
+  <span class="token comment">// const origin = { a: 1}</span>
+  <span class="token comment">// const a = reactive(origin)</span>
+  <span class="token comment">// const b = reactive(origin)</span>
+  <span class="token keyword">const</span> reactiveFlag <span class="token operator">=</span> isReadonly
+    <span class="token operator">?</span> ReactiveFlags<span class="token punctuation">.</span><span class="token constant">READONLY</span>
+    <span class="token operator">:</span> ReactiveFlags<span class="token punctuation">.</span><span class="token constant">REACTIVE</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">hasOwn</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> reactiveFlag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> target<span class="token punctuation">[</span>reactiveFlag<span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 最后一个条件，判断是否可以响应式或者只读化</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">canObserve</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> target
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 传入target生成proxy对象，注意这里区分的collectionHandlers和baseHandlers</span>
+  <span class="token keyword">const</span> observed <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Proxy</span><span class="token punctuation">(</span>
+    target<span class="token punctuation">,</span>
+    collectionTypes<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">(</span>target<span class="token punctuation">.</span>constructor<span class="token punctuation">)</span> <span class="token operator">?</span> collectionHandlers <span class="token operator">:</span> baseHandlers
+  <span class="token punctuation">)</span>
+  将生成的proxy对象保存到target的ReactiveFlags<span class="token punctuation">.</span><span class="token constant">READONLY</span>或者ReactiveFlags<span class="token punctuation">.</span><span class="token constant">REACTIVE</span>属性上
+  <span class="token function">def</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> reactiveFlag<span class="token punctuation">,</span> observed<span class="token punctuation">)</span>
+  <span class="token keyword">return</span> observed
+<span class="token punctuation">}</span>
+</code></pre></div><h2 id="basehandlers"><a href="#basehandlers" class="header-anchor">#</a> baseHandlers</h2></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
       ←
       <a href="/vue-next-analysis/" class="prev router-link-active">
         写在前面
@@ -220,6 +192,6 @@ function createReactiveObject(
       </a>
       →
     </span></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.3840a22d.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.d0683ae6.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.cbfb20a8.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.0d79c75c.js" defer></script>
   </body>
 </html>
