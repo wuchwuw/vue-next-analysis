@@ -208,10 +208,244 @@ baseHandles的代码存放在packages/src/reactivity/baseHandlers.ts中
 ### 相关源码
 
 ```js
-// 遍历对象的所有内建Symbol
+// 获取Symbol对象上所有的内建symbol值
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
     .map(key => (Symbol as any)[key])
     .filter(isSymbol)
 )
+
+// 定义了handles的get方法，它们都是调用createGetter方法生成的函数，只是传入的参数不同
+const get = /*#__PURE__*/ createGetter()
+const shallowGet = /*#__PURE__*/ createGetter(false, true)
+const readonlyGet = /*#__PURE__*/ createGetter(true)
+const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
+
+// 重写了Array上的几个方法并保存在arrayInstrumentations上
+// 主要的目的就是当调用这几个方法时，需要将数组上每一个key都添加为依赖
+// 试想一下在一个响应式的数组上面调用了includes方法查找某个值是否存在时
+// 那么数组上任意一个值的修改都有可能改变includes的结果，其他方法也是同理
+const arrayInstrumentations: Record<string, Function> = {}
+;['includes', 'indexOf', 'lastIndexOf'].forEach(key => {
+  arrayInstrumentations[key] = function(...args: any[]): any {
+    // 这里的this值为调用以上方法的proxy对象，也就是reactive或者readonly对象
+    // 通过toRaw返回ReactiveFlags.RAW属性上面原始对象的值
+    // 遍历所有的key，并通过track方法将所有的key添加为依赖
+    const arr = toRaw(this) as any
+    for (let i = 0, l = (this as any).length; i < l; i++) {
+      track(arr, TrackOpTypes.GET, i + '')
+    }
+    // we run the method using the original args first (which may be reactive)
+    // 通过key值拿到对应的方法并执行，这里也可以看到只要参数存在在原始的arr上，那么不管
+    // 传入参数本身还是参数的proxy对象都可以获得相同的结果
+    const res = arr[key](...args)
+    if (res === -1 || res === false) {
+      // if that didn't work, run it again using raw values.
+      return arr[key](...args.map(toRaw))
+    } else {
+      return res
+    }
+  }
+})
+
+// createGetter的参数有isReadonly和shallow，根据这两个参数来创建不同的get方法
+// 这里创建的get方法接收了3个参数也就是创建Proxy对象时传入的handlers对象的get方法一样
+function createGetter(isReadonly = false, shallow = false) {
+  return function get(target: object, key: string | symbol, receiver: object) {
+    // 当访问了proxy上的ReactiveFlags.IS_REACTIVE或者ReactiveFlags.IS_READONLY属性时，直接返回对应的值
+    // 这里也可以看到这两个属性并不直接添加到reactive或者readonly对象上，而是通过拦截get方法直接返回的
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly
+    } else if (
+      // 当访问proxy上的ReactiveFlags.RAW属性时，并且receiver和通过target创建的reactive或者readonly对象相等
+      // 则直接返回target，前面也说过了通过ReactiveFlags.RAW属性可以获得创建reactive或者readonly对象的原始对象
+      key === ReactiveFlags.RAW &&
+      receiver ===
+        (isReadonly
+          ? (target as any)[ReactiveFlags.READONLY]
+          : (target as any)[ReactiveFlags.REACTIVE])
+    ) {
+      return target
+    }
+    // 当原始对象target是一个数组，并且key是'includes', 'indexOf', 'lastIndexOf'中的一个
+    // 则执行上面定义的arrayInstrumentations中的方法
+    const targetIsArray = isArray(target)
+    if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
+      return Reflect.get(arrayInstrumentations, key, receiver)
+    }
+    // 如果是普通对象则通过Reflect.get拿到属性值res
+    const res = Reflect.get(target, key, receiver)
+    // 如果key是内建的Symbols或者是__proto__、__v_isRef(ref对象的标志)
+    // 则直接返回res，访问这些属性不会将这些key收集为依赖
+    if (
+      isSymbol(key)
+        ? builtInSymbols.has(key)
+        : key === `__proto__` || key === `__v_isRef`
+    ) {
+      return res
+    }
+    // 如果不是readonly的对象，那么调用tarck方法收集依赖
+    if (!isReadonly) {
+      track(target, TrackOpTypes.GET, key)
+    }
+    // 如果是shallow为true，也就是shallowReactiveHandlers或者shallowReadonlyHandlers，到这里就返回了
+    if (shallow) {
+      return res
+    }
+    // 如果属性的值是ref类型，那么在Object中应该是默认展开的(ref会在后面的章节介绍，这里先了解即可)
+    if (isRef(res)) {
+      // ref unwrapping, only for Objects, not for Arrays.
+      return targetIsArray ? res : res.value
+    }
+    // 如果属性的值是一个对象，那么应该继续对res进行响应式或只读转换
+    // 前面介绍api的时候也有说过了
+    // 这里也可以和Vue2.x的实现对比一下，以前是只要在data中定义了那么初始化的时候会递归遍历整个对象进行响应式转化
+    // 而3.x只有访问了属性并且属性的值是一个对象，才会继续进行响应式转化
+    if (isObject(res)) {
+      // Convert returned value into a proxy as well. we do the isObject check
+      // here to avoid invalid value warning. Also need to lazy access readonly
+      // and reactive here to avoid circular dependency.
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+
+    return res
+  }
+}
+
+// 接下来是set方法
+const set = /*#__PURE__*/ createSetter()
+const shallowSet = /*#__PURE__*/ createSetter(true)
+
+function createSetter(shallow = false) {
+  return function set(
+    target: object,
+    key: string | symbol,
+    value: unknown,
+    receiver: object
+  ): boolean {
+    // 先拿到旧值
+    const oldValue = (target as any)[key]
+    // 当设置的旧值原本是一个ref类型而新值不是ref时，那么新值应该设置到旧值的value属性上
+    if (!shallow) {
+      // 当设置的新值是reactive或者readonly对象时，则需要通过toRaw获取他们的原始对象
+      value = toRaw(value)
+      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value
+        return true
+      }
+    } else {
+      // in shallow mode, objects are set as-is regardless of reactive or not
+      // 如果是shallow模式，则不需要处理设置的新值，因为shallow模式的响应式对象只需拦截根层级的属性的操作
+    }
+    // 判断key值是不是已经存在
+    const hadKey = hasOwn(target, key)
+    // 通过Reflect.set设置新值
+    const result = Reflect.set(target, key, value, receiver)
+    // don't trigger if target is something up in the prototype chain of original
+    // 分析下面的代码前我们先看下面的例子：
+    // let dummy
+    // const a = { c: 1 }
+    // const b = reactive({ d: 1 })
+    // Object.setPrototypeOf(a, b)
+    // effect(() => {
+    //   dummy = b.d
+    //   console.log(dummy)
+    // })
+    // a.d = 2
+    // 这个例子的结果是，只会在输出一次dummy的值 1
+    // 当普通对象的原型是一个proxy对象时，对普通对象的操作也会被原型上的proxy对象拦截
+    // 这就导致了，我们往普通对象a上添加一个key为d的属性，会触发原型链上proxy b的set方法，proxy b上同样也有d属性
+    // 如果在这里派发更新很显然是不合理的，因为我们只是在操作普通对象a而已，所以这里才需要加一个判断条件
+    // 当触发原型链上proxy b的set方法时，target为proxy b的原始对象{ d: 1 }，但是由于我们是通过a对象访问d属性的
+    // 那么receiver就是a对象，所以target是肯定不等于toRaw(receiver)的，因此这里并不会派发更新
+    if (target === toRaw(receiver)) {
+      // 调用trigger方法派发更新，根据是修改还是添加key传入不同的参数
+      if (!hadKey) {
+        trigger(target, TriggerOpTypes.ADD, key, value)
+      } else if (hasChanged(value, oldValue)) {
+        trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+      }
+    }
+    return result
+  }
+}
+// 拦截删除操作的方法，这里没什么要注意的地方
+// 如果key存在并且删除成功，则调用trigger派发更新
+function deleteProperty(target: object, key: string | symbol): boolean {
+  const hadKey = hasOwn(target, key)
+  const oldValue = (target as any)[key]
+  const result = Reflect.deleteProperty(target, key)
+  if (result && hadKey) {
+    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+  }
+  return result
+}
+// 使用in操作符时会触发has方法，除了key的值为symbol外 都要调用track方法收集依赖
+function has(target: object, key: string | symbol): boolean {
+  const result = Reflect.has(target, key)
+  if (!isSymbol(key) || !builtInSymbols.has(key)) {
+    track(target, TrackOpTypes.HAS, key)
+  }
+  return result
+}
+// 遍历对象的key值时会触发ownKeys方法，调用track方法收集依赖，返回Reflect.ownKeys的执行结果
+function ownKeys(target: object): (string | number | symbol)[] {
+  track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+  return Reflect.ownKeys(target)
+}
+// 根据不同的的proxy对象组合handlers的功能，mutableHandlers包含了以上所有的方法
+export const mutableHandlers: ProxyHandler<object> = {
+  get,
+  set,
+  deleteProperty,
+  has,
+  ownKeys
+}
+// readonlyHandlers传入的是readonlyGet，并且重写了set和deleteProperty，在开发环境修改readonly对象的时会有警告
+export const readonlyHandlers: ProxyHandler<object> = {
+  get: readonlyGet,
+  has,
+  ownKeys,
+  set(target, key) {
+    if (__DEV__) {
+      console.warn(
+        `Set operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+    }
+    return true
+  },
+  deleteProperty(target, key) {
+    if (__DEV__) {
+      console.warn(
+        `Delete operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+    }
+    return true
+  }
+}
+// shallowReactiveHandlers除了get、set方法其他与mutableHandlers相同
+export const shallowReactiveHandlers: ProxyHandler<object> = extend(
+  {},
+  mutableHandlers,
+  {
+    get: shallowGet,
+    set: shallowSet
+  }
+)
+
+// Props handlers are special in the sense that it should not unwrap top-level
+// refs (in order to allow refs to be explicitly passed down), but should
+// retain the reactivity of the normal readonly object.
+export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
+  {},
+  readonlyHandlers,
+  {
+    get: shallowReadonlyGet
+  }
+)
 ```
+
