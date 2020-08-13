@@ -83,7 +83,7 @@ export function reactive(target: object) {
   )
 }
 
-// 通过shallowReactive方法创建一个shallow reactive，我们已经在前面介绍过它
+// 通过shallowReactive方法创建一个shallow reactive对象，我们已经在前面介绍过它
 // 可以看到shallowReactive方法返回的类型和传入的类型T是一致的
 export function shallowReactive<T extends object>(target: T): T {
   return createReactiveObject(
@@ -94,7 +94,7 @@ export function shallowReactive<T extends object>(target: T): T {
   )
 }
 
-// 通过readonly方法创建一个readonly reactive，我们已经在前面介绍过它
+// 通过readonly方法创建一个readonly对象，我们已经在前面介绍过它
 // 可以看到readonly方法返回的类型是DeepReadonly<UnwrapNestedRefs<T>>
 export function readonly<T extends object>(
   target: T
@@ -107,7 +107,7 @@ export function readonly<T extends object>(
   )
 }
 
-// 通过shallowReadonly方法创建一个readonly shallow reactive，我们已经在前面介绍过它
+// 通过shallowReadonly方法创建一个shallow readonly对象，我们已经在前面介绍过它
 // 可以看到shallowReadonly方法返回的类型是Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }>
 export function shallowReadonly<T extends object>(
   target: T
@@ -449,3 +449,127 @@ export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
 )
 ```
 
+## collectionHandlers
+
+当传入Reactivity Api的原始对象的类型是Map、Weakmap、Set、Weakset时，创建Proxy对象时传入的handlers为collectionHandlers，
+collectionHandlers的代码存放在packages/src/reactivity/collectionHandlers.ts中，根据api不同，
+传入的collectionHandlers也分为以下几种:
+
+```js
+
+export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
+  get: createInstrumentationGetter(false, false)
+}
+
+export const shallowCollectionHandlers: ProxyHandler<CollectionTypes> = {
+  get: createInstrumentationGetter(false, true)
+}
+
+export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
+  get: createInstrumentationGetter(true, false)
+}
+
+// 可以看到以上几种handlers都只定义了get方法，因为本身所有的collection类型的对象比如Map、Set都只能通过方法
+// 来操作对象，比如说set.add()、set.get()等等，所以只需要拦截对象的get操作就行了
+// 通过createInstrumentationGetter来创建不同类型的get方法
+
+function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
+  // 通过传入的参数返回不同的instrumentations
+  // instrumentations定义了重写的collection类型的对象上的方法
+  // 后面会详细分析
+  const instrumentations = shallow
+    ? shallowInstrumentations
+    : isReadonly
+      ? readonlyInstrumentations
+      : mutableInstrumentations
+  // 返回创建的get方法
+  return (
+    target: CollectionTypes,
+    key: string | symbol,
+    receiver: CollectionTypes
+  ) => {
+    // 这里的实现和baseHandlers一样
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly
+    } else if (key === ReactiveFlags.RAW) {
+      return target
+    }
+    // 如果访问的key是存在在instrumentations上的，那么获取的是instrumentations上的方法，否则
+    // 获取的是target上的方法
+    return Reflect.get(
+      hasOwn(instrumentations, key) && key in target
+        ? instrumentations
+        : target,
+      key,
+      receiver
+    )
+  }
+}
+
+const mutableInstrumentations: Record<string, Function> = {
+  get(this: MapTypes, key: unknown) {
+    return get(this, key, toReactive)
+  },
+  get size() {
+    return size((this as unknown) as IterableCollections)
+  },
+  has,
+  add,
+  set,
+  delete: deleteEntry,
+  clear,
+  forEach: createForEach(false, false)
+}
+
+const shallowInstrumentations: Record<string, Function> = {
+  get(this: MapTypes, key: unknown) {
+    return get(this, key, toShallow)
+  },
+  get size() {
+    return size((this as unknown) as IterableCollections)
+  },
+  has,
+  add,
+  set,
+  delete: deleteEntry,
+  clear,
+  forEach: createForEach(false, true)
+}
+
+const readonlyInstrumentations: Record<string, Function> = {
+  get(this: MapTypes, key: unknown) {
+    return get(this, key, toReadonly)
+  },
+  get size() {
+    return size((this as unknown) as IterableCollections)
+  },
+  has,
+  add: createReadonlyMethod(TriggerOpTypes.ADD),
+  set: createReadonlyMethod(TriggerOpTypes.SET),
+  delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+  clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+  forEach: createForEach(true, false)
+}
+
+const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
+iteratorMethods.forEach(method => {
+  mutableInstrumentations[method as string] = createIterableMethod(
+    method,
+    false,
+    false
+  )
+  readonlyInstrumentations[method as string] = createIterableMethod(
+    method,
+    true,
+    false
+  )
+  shallowInstrumentations[method as string] = createIterableMethod(
+    method,
+    false,
+    true
+  )
+})
+
+```
