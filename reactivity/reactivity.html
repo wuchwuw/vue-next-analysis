@@ -7,11 +7,11 @@
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.7b5dbc31.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.8148d8e8.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.0d1ba291.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.048b01af.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
-    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" aria-current="page" class="active sidebar-link">reactive</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#reactive" class="sidebar-link">reactive</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#basehandlers" class="sidebar-link">baseHandlers</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="reactive"><a href="#reactive" class="header-anchor">#</a> reactive</h2> <p>Reactivity Api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截对象的操作，并由此收集依赖或派发更新。
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" aria-current="page" class="active sidebar-link">reactive</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#reactive" class="sidebar-link">reactive</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#basehandlers" class="sidebar-link">baseHandlers</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/reactivity.html#collectionhandlers" class="sidebar-link">collectionHandlers</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="reactive"><a href="#reactive" class="header-anchor">#</a> reactive</h2> <p>Reactivity Api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截对象的操作，并由此收集依赖或派发更新。
 Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api创建的对象都是Proxy对象，它的核心api有以下几个:</p> <p>1、reactive: 返回原始对象的Proxy代理对象，支持收集依赖和派发更新，访问自身属性时会执行嵌套对象的深度响应式转换。
 2、shallowReactive: 返回原始对象的Proxy代理对象，但只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行响应式转换。
 3、readonly: 返回原始对象的Proxy代理对象，限制赋值操作，访问它的任何嵌套属性也将是只读的。
@@ -80,7 +80,7 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
   <span class="token punctuation">)</span>
 <span class="token punctuation">}</span>
 
-<span class="token comment">// 通过shallowReactive方法创建一个shallow reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 通过shallowReactive方法创建一个shallow reactive对象，我们已经在前面介绍过它</span>
 <span class="token comment">// 可以看到shallowReactive方法返回的类型和传入的类型T是一致的</span>
 <span class="token keyword">export</span> <span class="token keyword">function</span> shallowReactive<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>target<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token constant">T</span> <span class="token punctuation">{</span>
   <span class="token keyword">return</span> <span class="token function">createReactiveObject</span><span class="token punctuation">(</span>
@@ -91,7 +91,7 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
   <span class="token punctuation">)</span>
 <span class="token punctuation">}</span>
 
-<span class="token comment">// 通过readonly方法创建一个readonly reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 通过readonly方法创建一个readonly对象，我们已经在前面介绍过它</span>
 <span class="token comment">// 可以看到readonly方法返回的类型是DeepReadonly&lt;UnwrapNestedRefs&lt;T&gt;&gt;</span>
 <span class="token keyword">export</span> <span class="token keyword">function</span> readonly<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
   target<span class="token operator">:</span> <span class="token constant">T</span>
@@ -104,7 +104,7 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
   <span class="token punctuation">)</span>
 <span class="token punctuation">}</span>
 
-<span class="token comment">// 通过shallowReadonly方法创建一个readonly shallow reactive，我们已经在前面介绍过它</span>
+<span class="token comment">// 通过shallowReadonly方法创建一个shallow readonly对象，我们已经在前面介绍过它</span>
 <span class="token comment">// 可以看到shallowReadonly方法返回的类型是Readonly&lt;{ [K in keyof T]: UnwrapNestedRefs&lt;T[K]&gt; }&gt;</span>
 <span class="token keyword">export</span> <span class="token keyword">function</span> shallowReadonly<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">object</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
   target<span class="token operator">:</span> <span class="token constant">T</span>
@@ -426,6 +426,124 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
     <span class="token keyword">get</span><span class="token operator">:</span> shallowReadonlyGet
   <span class="token punctuation">}</span>
 <span class="token punctuation">)</span>
+</code></pre></div><h2 id="collectionhandlers"><a href="#collectionhandlers" class="header-anchor">#</a> collectionHandlers</h2> <p>当传入Reactivity Api的原始对象的类型是Map、Weakmap、Set、Weakset时，创建Proxy对象时传入的handlers为collectionHandlers，
+collectionHandlers的代码存放在packages/src/reactivity/collectionHandlers.ts中，根据api不同，
+传入的collectionHandlers也分为以下几种:</p> <div class="language-js extra-class"><pre class="language-js"><code>
+<span class="token keyword">export</span> <span class="token keyword">const</span> mutableCollectionHandlers<span class="token operator">:</span> ProxyHandler<span class="token operator">&lt;</span>CollectionTypes<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token operator">:</span> <span class="token function">createInstrumentationGetter</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">const</span> shallowCollectionHandlers<span class="token operator">:</span> ProxyHandler<span class="token operator">&lt;</span>CollectionTypes<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token operator">:</span> <span class="token function">createInstrumentationGetter</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">const</span> readonlyCollectionHandlers<span class="token operator">:</span> ProxyHandler<span class="token operator">&lt;</span>CollectionTypes<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token operator">:</span> <span class="token function">createInstrumentationGetter</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 可以看到以上几种handlers都只定义了get方法，因为本身所有的collection类型的对象比如Map、Set都只能通过方法</span>
+<span class="token comment">// 来操作对象，比如说set.add()、set.get()等等，所以只需要拦截对象的get操作就行了</span>
+<span class="token comment">// 通过createInstrumentationGetter来创建不同类型的get方法</span>
+
+<span class="token keyword">function</span> <span class="token function">createInstrumentationGetter</span><span class="token punctuation">(</span><span class="token parameter">isReadonly<span class="token operator">:</span> boolean<span class="token punctuation">,</span> shallow<span class="token operator">:</span> boolean</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 通过传入的参数返回不同的instrumentations</span>
+  <span class="token comment">// instrumentations定义了重写的collection类型的对象上的方法</span>
+  <span class="token comment">// 后面会详细分析</span>
+  <span class="token keyword">const</span> instrumentations <span class="token operator">=</span> shallow
+    <span class="token operator">?</span> shallowInstrumentations
+    <span class="token operator">:</span> isReadonly
+      <span class="token operator">?</span> readonlyInstrumentations
+      <span class="token operator">:</span> mutableInstrumentations
+  <span class="token comment">// 返回创建的get方法</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span>
+    <span class="token parameter">target<span class="token operator">:</span> CollectionTypes<span class="token punctuation">,</span>
+    key<span class="token operator">:</span> string <span class="token operator">|</span> symbol<span class="token punctuation">,</span>
+    receiver<span class="token operator">:</span> CollectionTypes</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 这里的实现和baseHandlers一样</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">===</span> ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_REACTIVE</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> <span class="token operator">!</span>isReadonly
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">===</span> ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_READONLY</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> isReadonly
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">===</span> ReactiveFlags<span class="token punctuation">.</span><span class="token constant">RAW</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> target
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果访问的key是存在在instrumentations上的，那么获取的是instrumentations上的方法，否则</span>
+    <span class="token comment">// 获取的是target上的方法</span>
+    <span class="token keyword">return</span> Reflect<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>
+      <span class="token function">hasOwn</span><span class="token punctuation">(</span>instrumentations<span class="token punctuation">,</span> key<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> key <span class="token keyword">in</span> target
+        <span class="token operator">?</span> instrumentations
+        <span class="token operator">:</span> target<span class="token punctuation">,</span>
+      key<span class="token punctuation">,</span>
+      receiver
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> mutableInstrumentations<span class="token operator">:</span> Record<span class="token operator">&lt;</span>string<span class="token punctuation">,</span> Function<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">:</span> MapTypes<span class="token punctuation">,</span> key<span class="token operator">:</span> unknown<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> toReactive<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">get</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token keyword">as</span> unknown<span class="token punctuation">)</span> <span class="token keyword">as</span> IterableCollections<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  has<span class="token punctuation">,</span>
+  add<span class="token punctuation">,</span>
+  <span class="token keyword">set</span><span class="token punctuation">,</span>
+  <span class="token keyword">delete</span><span class="token operator">:</span> deleteEntry<span class="token punctuation">,</span>
+  clear<span class="token punctuation">,</span>
+  forEach<span class="token operator">:</span> <span class="token function">createForEach</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> shallowInstrumentations<span class="token operator">:</span> Record<span class="token operator">&lt;</span>string<span class="token punctuation">,</span> Function<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">:</span> MapTypes<span class="token punctuation">,</span> key<span class="token operator">:</span> unknown<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> toShallow<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">get</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token keyword">as</span> unknown<span class="token punctuation">)</span> <span class="token keyword">as</span> IterableCollections<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  has<span class="token punctuation">,</span>
+  add<span class="token punctuation">,</span>
+  <span class="token keyword">set</span><span class="token punctuation">,</span>
+  <span class="token keyword">delete</span><span class="token operator">:</span> deleteEntry<span class="token punctuation">,</span>
+  clear<span class="token punctuation">,</span>
+  forEach<span class="token operator">:</span> <span class="token function">createForEach</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> readonlyInstrumentations<span class="token operator">:</span> Record<span class="token operator">&lt;</span>string<span class="token punctuation">,</span> Function<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">:</span> MapTypes<span class="token punctuation">,</span> key<span class="token operator">:</span> unknown<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> toReadonly<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">get</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token keyword">as</span> unknown<span class="token punctuation">)</span> <span class="token keyword">as</span> IterableCollections<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  has<span class="token punctuation">,</span>
+  add<span class="token operator">:</span> <span class="token function">createReadonlyMethod</span><span class="token punctuation">(</span>TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">ADD</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">set</span><span class="token operator">:</span> <span class="token function">createReadonlyMethod</span><span class="token punctuation">(</span>TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">SET</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">delete</span><span class="token operator">:</span> <span class="token function">createReadonlyMethod</span><span class="token punctuation">(</span>TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">DELETE</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  clear<span class="token operator">:</span> <span class="token function">createReadonlyMethod</span><span class="token punctuation">(</span>TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">CLEAR</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  forEach<span class="token operator">:</span> <span class="token function">createForEach</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> iteratorMethods <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'keys'</span><span class="token punctuation">,</span> <span class="token string">'values'</span><span class="token punctuation">,</span> <span class="token string">'entries'</span><span class="token punctuation">,</span> Symbol<span class="token punctuation">.</span>iterator<span class="token punctuation">]</span>
+iteratorMethods<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token parameter">method</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  mutableInstrumentations<span class="token punctuation">[</span>method <span class="token keyword">as</span> string<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">createIterableMethod</span><span class="token punctuation">(</span>
+    method<span class="token punctuation">,</span>
+    <span class="token boolean">false</span><span class="token punctuation">,</span>
+    <span class="token boolean">false</span>
+  <span class="token punctuation">)</span>
+  readonlyInstrumentations<span class="token punctuation">[</span>method <span class="token keyword">as</span> string<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">createIterableMethod</span><span class="token punctuation">(</span>
+    method<span class="token punctuation">,</span>
+    <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token boolean">false</span>
+  <span class="token punctuation">)</span>
+  shallowInstrumentations<span class="token punctuation">[</span>method <span class="token keyword">as</span> string<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">createIterableMethod</span><span class="token punctuation">(</span>
+    method<span class="token punctuation">,</span>
+    <span class="token boolean">false</span><span class="token punctuation">,</span>
+    <span class="token boolean">true</span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+
 </code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
       ←
       <a href="/vue-next-analysis/" class="prev router-link-active">
@@ -435,6 +553,6 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
       </a>
       →
     </span></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.7b5dbc31.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.8148d8e8.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.0d1ba291.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.048b01af.js" defer></script>
   </body>
 </html>
