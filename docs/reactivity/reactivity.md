@@ -10,6 +10,10 @@ Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api�
 
 Reactivity api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。
 
+### 一些概念
+
+普通对象： 
+
 ### 相关源码
 
 ``` js
@@ -571,5 +575,84 @@ iteratorMethods.forEach(method => {
     true
   )
 })
+
+// 可以从各个类型的instrumentations对象中看出，上面基本重写了Map、Set操作对象的方法
+// 当访问Map、Set等类型的Proxy对象的方法时，会被定义在handlers上的get拦截，并根据key值返回
+// instrumentations上重写的方法，接下来我们一个个方法分析，看看Vue如何重写这些方法
+
+const toReactive = <T extends unknown>(value: T): T =>
+  isObject(value) ? reactive(value) : value
+
+const toReadonly = <T extends unknown>(value: T): T =>
+  isObject(value) ? readonly(value) : value
+
+const toShallow = <T extends unknown>(value: T): T => value
+
+const getProto = <T extends CollectionTypes>(v: T): any =>
+  Reflect.getPrototypeOf(v)
+
+// 重写Map.prototype.get() / WeakMap.prototype.get()
+// target: 从上文看到这里传入的target是this，也就是调用重写的get方法的proxy对象
+// key: get方法传入的key值
+// wrap: 根据不同的handles对应传入toReactive、toReadonly、toShallow方法
+function get(
+  target: MapTypes,
+  key: unknown,
+  wrap: typeof toReactive | typeof toReadonly | typeof toShallow
+) {
+  // 拿到proxy的原始对象
+  target = toRaw(target)
+  // 通过toRaw拿到key的原始对象
+  // 如果key和rawKey不相等，则传入的key是reactive或readonly对象
+  // 那么应该同时将key和rawKey收集为依赖，如果不理解的话，后面添加key的逻辑会再解释
+  const rawKey = toRaw(key)
+  if (key !== rawKey) {
+    track(target, TrackOpTypes.GET, key)
+  }
+  track(target, TrackOpTypes.GET, rawKey)
+  // 从原始对象的原型上拿到原始的has、get方法
+  const { has, get } = getProto(target)
+  // 如果key存在，那么返回它的值，如果不存在则继续判断key的原始对象是否存在在target中
+  // 也就是说当添加一个普通对象作为key值到map上时，不管是key本身还是它的reactive或readonly对象，都可以获取到对应key的值
+  if (has.call(target, key)) {
+    return wrap(get.call(target, key))
+  } else if (has.call(target, rawKey)) {
+    return wrap(get.call(target, rawKey))
+  }
+}
+// 重写Map.prototype.has() / WeakMap.prototype.has() / Set.prototype.has() / WeakSet.prototype.has()
+// has方法与get实现差不多，
+function has(this: CollectionTypes, key: unknown): boolean {
+  const target = toRaw(this)
+  const rawKey = toRaw(key)
+  if (key !== rawKey) {
+    track(target, TrackOpTypes.HAS, key)
+  }
+  track(target, TrackOpTypes.HAS, rawKey)
+  const has = getProto(target).has
+  return has.call(target, key) || has.call(target, rawKey)
+}
+
+// 访问属性size执行此方法，注意这里添加依赖的key为ITERATE_KEY
+function size(target: IterableCollections) {
+  target = toRaw(target)
+  track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+  return Reflect.get(getProto(target), 'size', target)
+}
+
+// 重写Set.prototype.add() / WeakSet.prototype.add()
+// add方法先通过toRaw拿到value原始对象的值，并判断了原始对象是否存在，如果不存在则派发更新
+// 这里也可以看到，当通过add添加一个value时，不管传入的是value本身，还是它的代理对象，都
+function add(this: SetTypes, value: unknown) {
+  value = toRaw(value)
+  const target = toRaw(this)
+  const proto = getProto(target)
+  const hadKey = proto.has.call(target, value)
+  const result = proto.add.call(target, value)
+  if (!hadKey) {
+    trigger(target, TriggerOpTypes.ADD, value, value)
+  }
+  return result
+}
 
 ```
