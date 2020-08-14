@@ -7,7 +7,7 @@
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.0d1ba291.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.048b01af.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.fe87b29a.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/8.f59eec44.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f29edc2c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.9ed4342e.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
@@ -15,7 +15,7 @@
 Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api创建的对象都是Proxy对象，它的核心api有以下几个:</p> <p>1、reactive: 返回原始对象的Proxy代理对象，支持收集依赖和派发更新，访问自身属性时会执行嵌套对象的深度响应式转换。
 2、shallowReactive: 返回原始对象的Proxy代理对象，但只拦截对象根层级的属性的操作，如果属性的值也是对象，不会对它进行响应式转换。
 3、readonly: 返回原始对象的Proxy代理对象，限制赋值操作，访问它的任何嵌套属性也将是只读的。
-4、shallowReadonly: 返回原始对象的Proxy代理对象，只限制对象根层级的属性的set操作，但不执行嵌套对象的深度只读转换。</p> <p>Reactivity api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。</p> <h3 id="相关源码"><a href="#相关源码" class="header-anchor">#</a> 相关源码</h3> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能是</span>
+4、shallowReadonly: 返回原始对象的Proxy代理对象，只限制对象根层级的属性的set操作，但不执行嵌套对象的深度只读转换。</p> <p>Reactivity api除了支持基本的plain object和array外，还支持map、weakmap、set、weakset等collection的响应式化。我们可以通过它的测试用例来了解reactive以及它相关api的用法，这对我们学习源码很有帮助。</p> <h3 id="一些概念"><a href="#一些概念" class="header-anchor">#</a> 一些概念</h3> <p>普通对象：</p> <h3 id="相关源码"><a href="#相关源码" class="header-anchor">#</a> 相关源码</h3> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能是</span>
 <span class="token comment">// reactive对象或者readonly对象，那么就需要一些属性来判断target的类型</span>
 <span class="token comment">// 通过ReactiveFlags枚举了这些属性的名字，它们的含义如下:</span>
 <span class="token comment">// SKIP: 当原始对象target存在此属性则跳过只读或者响应式化</span>
@@ -544,6 +544,85 @@ iteratorMethods<span class="token punctuation">.</span><span class="token functi
   <span class="token punctuation">)</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span>
 
+<span class="token comment">// 可以从各个类型的instrumentations对象中看出，上面基本重写了Map、Set操作对象的方法</span>
+<span class="token comment">// 当访问Map、Set等类型的Proxy对象的方法时，会被定义在handlers上的get拦截，并根据key值返回</span>
+<span class="token comment">// instrumentations上重写的方法，接下来我们一个个方法分析，看看Vue如何重写这些方法</span>
+
+<span class="token keyword">const</span> toReactive <span class="token operator">=</span> <span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">unknown</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>value<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token parameter"><span class="token constant">T</span></span> <span class="token operator">=&gt;</span>
+  <span class="token function">isObject</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token function">reactive</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span> <span class="token operator">:</span> value
+
+<span class="token keyword">const</span> toReadonly <span class="token operator">=</span> <span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">unknown</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>value<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token parameter"><span class="token constant">T</span></span> <span class="token operator">=&gt;</span>
+  <span class="token function">isObject</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token function">readonly</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span> <span class="token operator">:</span> value
+
+<span class="token keyword">const</span> toShallow <span class="token operator">=</span> <span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">unknown</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>value<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token parameter"><span class="token constant">T</span></span> <span class="token operator">=&gt;</span> value
+
+<span class="token keyword">const</span> getProto <span class="token operator">=</span> <span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token keyword">extends</span> <span class="token class-name">CollectionTypes</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>v<span class="token operator">:</span> <span class="token constant">T</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token parameter">any</span> <span class="token operator">=&gt;</span>
+  Reflect<span class="token punctuation">.</span><span class="token function">getPrototypeOf</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span>
+
+<span class="token comment">// 重写Map.prototype.get() / WeakMap.prototype.get()</span>
+<span class="token comment">// target: 从上文看到这里传入的target是this，也就是调用重写的get方法的proxy对象</span>
+<span class="token comment">// key: get方法传入的key值</span>
+<span class="token comment">// wrap: 根据不同的handles对应传入toReactive、toReadonly、toShallow方法</span>
+<span class="token keyword">function</span> <span class="token keyword">get</span><span class="token punctuation">(</span>
+  <span class="token parameter">target<span class="token operator">:</span> MapTypes<span class="token punctuation">,</span>
+  key<span class="token operator">:</span> unknown<span class="token punctuation">,</span>
+  wrap<span class="token operator">:</span> <span class="token keyword">typeof</span> toReactive <span class="token operator">|</span> <span class="token keyword">typeof</span> toReadonly <span class="token operator">|</span> <span class="token keyword">typeof</span> toShallow</span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 拿到proxy的原始对象</span>
+  target <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token comment">// 通过toRaw拿到key的原始对象</span>
+  <span class="token comment">// 如果key和rawKey不相等，则传入的key是reactive或readonly对象</span>
+  <span class="token comment">// 那么应该同时将key和rawKey收集为依赖，如果不理解的话，后面添加key的逻辑会再解释</span>
+  <span class="token keyword">const</span> rawKey <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">!==</span> rawKey<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">track</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">GET</span><span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">track</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">GET</span><span class="token punctuation">,</span> rawKey<span class="token punctuation">)</span>
+  <span class="token comment">// 从原始对象的原型上拿到原始的has、get方法</span>
+  <span class="token keyword">const</span> <span class="token punctuation">{</span> has<span class="token punctuation">,</span> <span class="token keyword">get</span> <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token function">getProto</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token comment">// 如果key存在，那么返回它的值，如果不存在则继续判断key的原始对象是否存在在target中</span>
+  <span class="token comment">// 也就是说当添加一个普通对象作为key值到map上时，不管是key本身还是它的reactive或readonly对象，都可以获取到对应key的值</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">has</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">wrap</span><span class="token punctuation">(</span><span class="token keyword">get</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">has</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> rawKey<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">wrap</span><span class="token punctuation">(</span><span class="token keyword">get</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> rawKey<span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span class="token comment">// 重写Map.prototype.has() / WeakMap.prototype.has() / Set.prototype.has() / WeakSet.prototype.has()</span>
+<span class="token comment">// has方法与get实现差不多，</span>
+<span class="token keyword">function</span> <span class="token function">has</span><span class="token punctuation">(</span><span class="token parameter"><span class="token keyword">this</span><span class="token operator">:</span> CollectionTypes<span class="token punctuation">,</span> key<span class="token operator">:</span> unknown</span><span class="token punctuation">)</span><span class="token operator">:</span> boolean <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> target <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+  <span class="token keyword">const</span> rawKey <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">!==</span> rawKey<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">track</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">HAS</span><span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">track</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">HAS</span><span class="token punctuation">,</span> rawKey<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> has <span class="token operator">=</span> <span class="token function">getProto</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">.</span>has
+  <span class="token keyword">return</span> <span class="token function">has</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> key<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token function">has</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> rawKey<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 访问属性size执行此方法，注意这里添加依赖的key为ITERATE_KEY</span>
+<span class="token keyword">function</span> <span class="token function">size</span><span class="token punctuation">(</span><span class="token parameter">target<span class="token operator">:</span> IterableCollections</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  target <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token function">track</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">ITERATE</span><span class="token punctuation">,</span> <span class="token constant">ITERATE_KEY</span><span class="token punctuation">)</span>
+  <span class="token keyword">return</span> Reflect<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token function">getProto</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'size'</span><span class="token punctuation">,</span> target<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 重写Set.prototype.add() / WeakSet.prototype.add()</span>
+<span class="token comment">// add方法先通过toRaw拿到value原始对象的值，并判断了原始对象是否存在，如果不存在则派发更新</span>
+<span class="token comment">// 这里也可以看到，当通过add添加一个value时，不管传入的是value本身，还是它的代理对象，都</span>
+<span class="token keyword">function</span> <span class="token function">add</span><span class="token punctuation">(</span><span class="token parameter"><span class="token keyword">this</span><span class="token operator">:</span> SetTypes<span class="token punctuation">,</span> value<span class="token operator">:</span> unknown</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  value <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> target <span class="token operator">=</span> <span class="token function">toRaw</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+  <span class="token keyword">const</span> proto <span class="token operator">=</span> <span class="token function">getProto</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> hadKey <span class="token operator">=</span> proto<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> proto<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>hadKey<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">trigger</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">ADD</span><span class="token punctuation">,</span> value<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> result
+<span class="token punctuation">}</span>
+
 </code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
       ←
       <a href="/vue-next-analysis/" class="prev router-link-active">
@@ -553,6 +632,6 @@ iteratorMethods<span class="token punctuation">.</span><span class="token functi
       </a>
       →
     </span></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.0d1ba291.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.048b01af.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.fe87b29a.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/8.f59eec44.js" defer></script>
   </body>
 </html>
