@@ -12,20 +12,22 @@ Reactivity api除了支持基本的plain object和array外，还支持map、weak
 
 ### 一些概念
 
-普通对象： 
+普通对象：Object、Array、Map、Weakmap、Set、Weakset中的一种
+代理对象：普通对象传入Reactivity Api后返回的Proxy对象
+原始对象：创建Proxy对象的target对象，原始对象有可能是普通对象也可能是代理对象
 
 ### 相关源码
 
 ``` js
-// 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能是
-// reactive对象或者readonly对象，那么就需要一些属性来判断target的类型
+// 定义了传入Proxy的原始对象target上可能出现的一些属性的类型，这里需要注意的是，传入的target可能是一个普通对象也可能
+// 代理对象，那么就需要一些属性来判断target的类型
 // 通过ReactiveFlags枚举了这些属性的名字，它们的含义如下:
-// SKIP: 当原始对象target存在此属性则跳过只读或者响应式化
-// IS_REACTIVE: 当此属性为true时，则target已经是一个reactive对象
-// IS_READONLY: 当此属性为true时，则target已经是一个readonly对象
-// RAW: 当target是一个reactive或者readonly对象时，通过此属性获得原始对象的值
-// REACTIVE: 当原始对象target是一个普通对象，但是它已经被响应式化过了，通过此属性可获得target的响应式对象
-// READONLY: 当原始对象target是一个普通对象，但是它已经被只读化过了，通过此属性可获得target的只读对象
+// SKIP: 当传入的原始对象target存在此属性则跳过只读或者响应式化
+// IS_REACTIVE: 当此属性为true时，则target已经是一个reactive代理对象
+// IS_READONLY: 当此属性为true时，则target已经是一个readonly代理对象
+// RAW: 当target是一个代理对象时，通过此属性获得原始对象的值
+// REACTIVE: 当原始对象target是一个普通对象，但是它已经被响应式化过了，通过此属性可获得target的响应式代理对象
+// READONLY: 当原始对象target是一个普通对象，但是它已经被只读化过了，通过此属性可获得target的只读代理对象
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
@@ -194,6 +196,45 @@ function createReactiveObject(
   将生成的proxy对象保存到target的ReactiveFlags.READONLY或者ReactiveFlags.REACTIVE属性上
   def(target, reactiveFlag, observed)
   return observed
+}
+
+```
+
+其他几个经常使用到的Api，后面的源码中也经常用到：
+
+```js
+
+// 判断是一个对是不是响应式代理对象
+export function isReactive(value: unknown): boolean {
+  // 如果对象是一个只读对象，那么获取它的原始对象
+  // 如果原始对象本身是一个响应式代理对象，那么也返回true
+  if (isReadonly(value)) {
+    return isReactive((value as Target)[ReactiveFlags.RAW])
+  }
+  // 通过value上ReactiveFlags.IS_REACTIVE属性判断
+  return !!(value && (value as Target)[ReactiveFlags.IS_REACTIVE])
+}
+
+// 判断一个对象是不是一个只读代理对象
+export function isReadonly(value: unknown): boolean {
+  return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
+}
+
+// 判断一个对象是不是一个代理对象
+export function isProxy(value: unknown): boolean {
+  return isReactive(value) || isReadonly(value)
+}
+
+// 获取代理对象的原始对象，如果不存在则返回本身
+export function toRaw<T>(observed: T): T {
+  return (
+    (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
+  )
+}
+
+export function markRaw<T extends object>(value: T): T {
+  def(value, ReactiveFlags.SKIP, true)
+  return value
 }
 ```
 
@@ -603,7 +644,7 @@ function get(
   // 拿到proxy的原始对象
   target = toRaw(target)
   // 通过toRaw拿到key的原始对象
-  // 如果key和rawKey不相等，则传入的key是reactive或readonly对象
+  // 如果key和rawKey不相等，则传入的key是一个代理对象
   // 那么应该同时将key和rawKey收集为依赖，如果不理解的话，后面添加key的逻辑会再解释
   const rawKey = toRaw(key)
   if (key !== rawKey) {
@@ -641,8 +682,8 @@ function size(target: IterableCollections) {
 }
 
 // 重写Set.prototype.add() / WeakSet.prototype.add()
-// add方法先通过toRaw拿到value原始对象的值，并判断了原始对象是否存在，如果不存在则派发更新
-// 这里也可以看到，当通过add添加一个value时，不管传入的是value本身，还是它的代理对象，都
+// 当通过add添加一个value时，如果value是一个代理对象，那么会先尝试拿到value
+// 的原始对象，并判断了value是否存在在set上，如果不存在才派发更新
 function add(this: SetTypes, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
@@ -655,4 +696,186 @@ function add(this: SetTypes, value: unknown) {
   return result
 }
 
+// 重写Map.prototype.set() / WeakMap.prototype.set()
+function set(this: MapTypes, key: unknown, value: unknown) {
+  value = toRaw(value)
+  const target = toRaw(this)
+  const { has, get, set } = getProto(target)
+  // 判断key是否已经存在在map上，先判断传入的key本身是否存在，如果不存在
+  // 通过toRaw尝试拿到key的原始对象，继续判断
+  // 也就是说当map上的key是一个对象时，不管是传入key本身或者key的代理对象
+  // 都可以获取到key的值
+  let hadKey = has.call(target, key)
+  if (!hadKey) {
+    key = toRaw(key)
+    hadKey = has.call(target, key)
+  } else if (__DEV__) {
+    checkIdentityKeys(target, has, key)
+  }
+  // 调用原始对象的方法拿到旧值并设置新的值
+  const oldValue = get.call(target, key)
+  const result = set.call(target, key, value)
+  // 根据是修改key的值还是添加一个新key，传入不同的参数，派发更新
+  if (!hadKey) {
+    trigger(target, TriggerOpTypes.ADD, key, value)
+  } else if (hasChanged(value, oldValue)) {
+    trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+  }
+  return result
+}
+
+// 重写Map.prototype.delete / Set.prototype.delete
+function deleteEntry(this: CollectionTypes, key: unknown) {
+  const target = toRaw(this)
+  const { has, get, delete: del } = getProto(target)
+  // 判断key是否已经存在在Map或Set上，如果是Map对象则key是将要删除的键值，
+  // 如果是Set对象则key为将要删除的值
+  // 先判断传入的key本身是否存在，如果不存在
+  // 通过toRaw尝试拿到key的原始对象，继续判断
+  // 也就是说当Map上的key或者Set上的值是一个对象时，不管是传入key本身或者key的代理对象
+  // 都可以删除这个键或者值
+  let hadKey = has.call(target, key)
+  if (!hadKey) {
+    key = toRaw(key)
+    hadKey = has.call(target, key)
+  } else if (__DEV__) {
+    checkIdentityKeys(target, has, key)
+  }
+  // 当原始的get方法不存在时，即target是一个Set对象，那么旧值就是undefinedß
+  // 如果target是Map对象，则通过原始的get方法拿到旧值
+  const oldValue = get ? get.call(target, key) : undefined
+  // 执行原始的delete方法
+  const result = del.call(target, key)
+  // 当删除的Map上的key或者Set的值存在时，才需要派发更新
+  if (hadKey) {
+    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+  }
+  return result
+}
+
+// 重写Map.prototype.clear / Set.prototype.clear
+function clear(this: IterableCollections) {
+  const target = toRaw(this)
+  // 判断Map或者Set是否为空
+  const hadItems = target.size !== 0
+  // 如果是开发环境则创建一个新的Map或Set传入派发更新的trigger中
+  const oldTarget = __DEV__
+    ? target instanceof Map
+      ? new Map(target)
+      : new Set(target)
+    : undefined
+  // 调用原始的clear拿到结果
+  const result = getProto(target).clear.call(target)
+  // 调用clear时，如果Map或者Set本身不为空，才派发更新
+  if (hadItems) {
+    trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
+  }
+  return result
+}
+
+// 重写Map.prototype.forEach / Set.prototype.forEach
+function createForEach(isReadonly: boolean, shallow: boolean) {
+  return function forEach(
+    this: IterableCollections,
+    callback: Function,
+    thisArg?: unknown
+  ) {
+    const observed = this
+    const target = toRaw(observed)
+    // 根据传入参数使用不同的wrap，当调用forEach遍历时，访问的item或者key也是一个对象时
+    // 使用wrap方法将它们转化为只读或者响应式对象
+    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
+    // 如果不是readonly对象，才调用tarck添加依赖
+    !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+    // important: create sure the callback is
+    // 1. invoked with the reactive map as `this` and 3rd arg
+    // 2. the value received should be a corresponding reactive/readonly.
+    // 调用传入forEach的callback，并将key和value进行只读或者响应式化
+    function wrappedCallback(value: unknown, key: unknown) {
+      return callback.call(thisArg, wrap(value), wrap(key), observed)
+    }
+    return getProto(target).forEach.call(target, wrappedCallback)
+  }
+}
+
+// 创建对象内部的迭代方法
+// method为keys, values, entries, Symbol.iterator中的一种
+// 调用这些方法都是返回对象内部的迭代器
+function createIterableMethod(
+  method: string | symbol,
+  isReadonly: boolean,
+  shallow: boolean
+) {
+  return function(
+    this: IterableCollections,
+    ...args: unknown[]
+  ): Iterable & Iterator {
+    const target = toRaw(this)
+    // 是否是Map对象
+    const isMap = target instanceof Map
+    // 是否返回键值对
+    const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
+    // 如果是keys方法并且是Map对象，传入track方法的key为MAP_KEY_ITERATE_KEY
+    // 后面会解释MAP_KEY_ITERATE_KE和ITERATE_KEY的不同
+    const isKeyOnly = method === 'keys' && isMap
+    // 调用原始对象上的方法获得原始的迭代器
+    const innerIterator = getProto(target)[method].apply(target, args)
+    // 如果不是readonly对象，才调用tarck添加依赖
+    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
+    !isReadonly &&
+      track(
+        target,
+        TrackOpTypes.ITERATE,
+        isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
+      )
+    // return a wrapped iterator which returns observed versions of the
+    // values emitted from the real iterator
+    // 返回重写的迭代器，访问的key或者value也是一个对象时
+    // 使用wrap方法将它们转化为只读或者响应式对象
+    return {
+      // iterator protocol
+      next() {
+        const { value, done } = innerIterator.next()
+        return done
+          ? { value, done }
+          : {
+              value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
+              done
+            }
+      },
+      // iterable protocol
+      [Symbol.iterator]() {
+        return this
+      }
+    }
+  }
+}
+
+// readonly对象的add、set、delete、clear方法
+// 在一个readonly对象上调用这些方法应该发出警告
+// 如果调用delete返回false，其他返回对象本身
+function createReadonlyMethod(type: TriggerOpTypes): Function {
+  return function(this: CollectionTypes, ...args: unknown[]) {
+    if (__DEV__) {
+      const key = args[0] ? `on key "${args[0]}" ` : ``
+      console.warn(
+        `${capitalize(type)} operation ${key}failed: target is readonly.`,
+        toRaw(this)
+      )
+    }
+    return type === TriggerOpTypes.DELETE ? false : this
+  }
+}
+
 ```
+
+## 类型
+
+// todo
+
+## 总结
+
+可以看到Reactivity Api就是创建一个代理对象来拦截一些对原始对象的操作，根据传入的原始对象的类型传入不同的handlers
+Array、Object传入baseHandlers、Map、Weakmap、Set、Weakset的传入collectionHandlers，其中在handlers中
+调用的收集依赖方法track和派发更新方法trigger将在effect章节中分析，这里只需知道在哪些拦截方法中收集依赖或者派发
+更新并且了解调用这些方法时传入不同的参数。
