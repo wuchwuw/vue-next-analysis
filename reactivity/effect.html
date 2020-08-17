@@ -3,15 +3,285 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>hello effect | VueNextAnalysis</title>
+    <title>Effect | VueNextAnalysis</title>
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.21563d45.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/7.f29edc2c.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.9add0ac0.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.6a508780.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.434bbc7d.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/7.5486d672.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.bf90ca2e.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
-    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" aria-current="page" class="active sidebar-link">effect</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/effect.html#hello-effect" class="sidebar-link">hello effect</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="hello-effect"><a href="#hello-effect" class="header-anchor">#</a> hello effect</h2></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" aria-current="page" class="active sidebar-link">effect</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/effect.html#effect" class="sidebar-link">Effect</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/effect.html#相关源码" class="sidebar-link">相关源码</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/effect.html#收集依赖" class="sidebar-link">收集依赖</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/effect.html#派发更新" class="sidebar-link">派发更新</a></li></ul></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="effect"><a href="#effect" class="header-anchor">#</a> Effect</h2> <p>在之前的章节中，我们分析了Reactivity Api和Ref的实现，在分析的过程中我们一直会遇到两个方法track和trigger，不过之前我们并没有
+深入这两个方法去分析，而是简单的将它们称为收集依赖和派发更新的过程。而track和trigger方法和本章将要分析的Effect息息相关，所以我们
+将在这个章节重点介绍这两个方法。不过本章的主角依然是effect，同时effect也是实现computed、watch等api的核心。</p> <div class="language-js extra-class"><pre class="language-js"><code>
+  <span class="token keyword">let</span> dummy
+  <span class="token keyword">const</span> r <span class="token operator">=</span> <span class="token function">reactive</span><span class="token punctuation">(</span><span class="token punctuation">{</span> a<span class="token operator">:</span> <span class="token number">1</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token function">effect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    dummy <span class="token operator">=</span> r<span class="token punctuation">.</span>a
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>dummy<span class="token punctuation">)</span> <span class="token comment">// 执行2次，结果为1、 2</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  r<span class="token punctuation">.</span>a <span class="token operator">=</span> <span class="token number">2</span>
+
+</code></pre></div><p>我们可以使用effect api并且传递一个函数来创建一个Effect，当函数中的响应式对象发生变化时，传入effect的函数会再次执行。</p> <h2 id="相关源码"><a href="#相关源码" class="header-anchor">#</a> 相关源码</h2> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 从ReactiveEffect类型可以看到，当我们调用effect方法创建一个Effect时</span>
+<span class="token comment">// 返回的是一个函数，并且在函数上面挂载了一些属性，这些属性的含义后面会详细说明</span>
+<span class="token keyword">export</span> <span class="token keyword">interface</span> <span class="token class-name">ReactiveEffect</span><span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token operator">=</span> any<span class="token operator">&gt;</span> <span class="token punctuation">{</span>
+  <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token constant">T</span>
+  _isEffect<span class="token operator">:</span> <span class="token boolean">true</span>
+  id<span class="token operator">:</span> number
+  active<span class="token operator">:</span> boolean
+  <span class="token function-variable function">raw</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token constant">T</span>
+  deps<span class="token operator">:</span> Array<span class="token operator">&lt;</span>Dep<span class="token operator">&gt;</span>
+  options<span class="token operator">:</span> ReactiveEffectOptions
+<span class="token punctuation">}</span>
+
+<span class="token comment">// effect方法传入了一个函数fn和一个配置对象options</span>
+<span class="token comment">// 从配置对象的类型ReactiveEffectOptions可以看到，</span>
+<span class="token comment">// options支持以下的参数，这些参数的作用会在下面的源码中说明</span>
+<span class="token keyword">export</span> <span class="token keyword">interface</span> <span class="token class-name">ReactiveEffectOptions</span> <span class="token punctuation">{</span>
+  lazy<span class="token operator">?</span><span class="token operator">:</span> boolean
+  scheduler<span class="token operator">?</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">job<span class="token operator">:</span> ReactiveEffect</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token keyword">void</span>
+  onTrack<span class="token operator">?</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">event<span class="token operator">:</span> DebuggerEvent</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token keyword">void</span>
+  onTrigger<span class="token operator">?</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">event<span class="token operator">:</span> DebuggerEvent</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token keyword">void</span>
+  onStop<span class="token operator">?</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token keyword">void</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> effect<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token operator">=</span> any<span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  <span class="token function-variable function">fn</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token constant">T</span><span class="token punctuation">,</span>
+  options<span class="token operator">:</span> ReactiveEffectOptions <span class="token operator">=</span> <span class="token constant">EMPTY_OBJ</span>
+<span class="token punctuation">)</span><span class="token operator">:</span> ReactiveEffect<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 通过isEffect判断传入的fn上是否存在_isEffect属性</span>
+  <span class="token comment">// 如果存在，则证明传入的fn本身已经是一个Effect</span>
+  <span class="token comment">// 而创建Effect时传入的函数fn都会保存在raw属性上</span>
+  <span class="token comment">// 所以这里应该拿到Effect上的raw属性的函数赋值给fn</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isEffect</span><span class="token punctuation">(</span>fn<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    fn <span class="token operator">=</span> fn<span class="token punctuation">.</span>raw
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 通过createReactiveEffect创建effect</span>
+  <span class="token keyword">const</span> effect <span class="token operator">=</span> <span class="token function">createReactiveEffect</span><span class="token punctuation">(</span>fn<span class="token punctuation">,</span> options<span class="token punctuation">)</span>
+  <span class="token comment">// 从上面的例子可以看出，Effect在创建时会先执行一次</span>
+  <span class="token comment">// 如果想跳过这次执行，可以将options.lazy设置为true</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>options<span class="token punctuation">.</span>lazy<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">effect</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> effect
+<span class="token punctuation">}</span>
+
+<span class="token comment">// effect全局id</span>
+<span class="token keyword">let</span> uid <span class="token operator">=</span> <span class="token number">0</span>
+
+<span class="token keyword">function</span> createReactiveEffect<span class="token operator">&lt;</span><span class="token constant">T</span> <span class="token operator">=</span> any<span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  <span class="token function-variable function">fn</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token constant">T</span><span class="token punctuation">,</span>
+  options<span class="token operator">:</span> ReactiveEffectOptions
+<span class="token punctuation">)</span><span class="token operator">:</span> ReactiveEffect<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 从createReactiveEffect方法可以看出，创建的Effect和我们上面分析的一样</span>
+  <span class="token comment">// 它本身是一个函数，并且挂载了一些属性，当传入effect方法的fn中的响应式对象发生改变时，</span>
+  <span class="token comment">// 就会再次执行这个effect函数，而当没有设置options.lazy时，第一次创建Effect时也会执行</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">effect</span> <span class="token operator">=</span> <span class="token keyword">function</span> <span class="token function">reactiveEffect</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> unknown <span class="token punctuation">{</span>
+    <span class="token comment">// 如果effect.active为false，并且配置了options.scheduler</span>
+    <span class="token comment">// 那么直接返回undefined，否则再次执行传入的fn并返回结果</span>
+    <span class="token comment">// 这里主要是为了配合computed的实现，后面分析computed会再次说明</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>effect<span class="token punctuation">.</span>active<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> options<span class="token punctuation">.</span>scheduler <span class="token operator">?</span> <span class="token keyword">undefined</span> <span class="token operator">:</span> <span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 因为effect是可以嵌套的执行的，所以这里通过一个栈来保存当前所有嵌套的Effect</span>
+    <span class="token comment">// EffectA</span>
+    <span class="token comment">// effect(() =&gt; { </span>
+    <span class="token comment">//   EffectB</span>
+    <span class="token comment">//   effect(() =&gt; {}) </span>
+    <span class="token comment">// })</span>
+    <span class="token comment">// effectStack: [EffectA, EffectB]</span>
+    <span class="token comment">// 如果当前的effect已经存在在effectStack中则什么都不做，这样做避免了在effect中修改</span>
+    <span class="token comment">// 响应式对象而造成循环</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>effectStack<span class="token punctuation">.</span><span class="token function">includes</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 每次执行fn前，先调用cleanup方法，遍历deps属性，将本身从依赖中清除</span>
+      <span class="token comment">// </span>
+      <span class="token function">cleanup</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span>
+      <span class="token keyword">try</span> <span class="token punctuation">{</span>
+        <span class="token function">enableTracking</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token comment">// 将当前的effect添加到effectStack中</span>
+        effectStack<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span>
+        <span class="token comment">// 将当前的effect赋值给activeEffect</span>
+        activeEffect <span class="token operator">=</span> effect
+        <span class="token comment">// 执行fn，并且重新收集依赖</span>
+        <span class="token keyword">return</span> <span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">finally</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 执行完当前的effect后，将effect从effectStack中pop出来</span>
+        <span class="token comment">// 并且将activeEffect赋值为上一个Effect</span>
+        effectStack<span class="token punctuation">.</span><span class="token function">pop</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token function">resetTracking</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        activeEffect <span class="token operator">=</span> effectStack<span class="token punctuation">[</span>effectStack<span class="token punctuation">.</span>length <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span> <span class="token keyword">as</span> ReactiveEffect
+  <span class="token comment">// effect全局id</span>
+  effect<span class="token punctuation">.</span>id <span class="token operator">=</span> uid<span class="token operator">++</span>
+  <span class="token comment">// 是否为Effect的标志</span>
+  effect<span class="token punctuation">.</span>_isEffect <span class="token operator">=</span> <span class="token boolean">true</span>
+  <span class="token comment">// 配合实现computed的属性</span>
+  effect<span class="token punctuation">.</span>active <span class="token operator">=</span> <span class="token boolean">true</span>
+  <span class="token comment">// 保存传入的fn</span>
+  effect<span class="token punctuation">.</span>raw <span class="token operator">=</span> fn
+  <span class="token comment">// 将fn中所有的响应式对象的依赖保存一份到deps属性上，方便在某些时候清除依赖</span>
+  effect<span class="token punctuation">.</span>deps <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+  <span class="token comment">// 保存传入的options</span>
+  effect<span class="token punctuation">.</span>options <span class="token operator">=</span> options
+  <span class="token keyword">return</span> effect
+<span class="token punctuation">}</span>
+
+</code></pre></div><p>分析完了Effect的创建过程，我们已经对Effect有了一定的了解，但是仅仅了解如何创建Effect是不够的，我们还需要知道Effect
+是如何与响应式对象一起协作的，也就是Effect是如何收集依赖和派发更新的。在上面源码中我们分析到，Effect创建的时候会先自己
+执行一次，那么就会执行到我们传入effect方法的函数fn，执行fn时就会访问到函数里的响应式对象并触发响应式对象的get方法，在
+get方法中就会调用track方法进行依赖收集。</p> <h2 id="收集依赖"><a href="#收集依赖" class="header-anchor">#</a> 收集依赖</h2> <div class="language-js extra-class"><pre class="language-js"><code>
+<span class="token comment">// 有以下几种访问响应式对象的操作需要将key添加为依赖</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token keyword">enum</span> TrackOpTypes <span class="token punctuation">{</span>
+  <span class="token constant">GET</span> <span class="token operator">=</span> <span class="token string">'get'</span><span class="token punctuation">,</span>
+  <span class="token constant">HAS</span> <span class="token operator">=</span> <span class="token string">'has'</span><span class="token punctuation">,</span>
+  <span class="token constant">ITERATE</span> <span class="token operator">=</span> <span class="token string">'iterate'</span>
+<span class="token punctuation">}</span>
+
+type Dep <span class="token operator">=</span> Set<span class="token operator">&lt;</span>ReactiveEffect<span class="token operator">&gt;</span>
+type KeyToDepMap <span class="token operator">=</span> Map<span class="token operator">&lt;</span>any<span class="token punctuation">,</span> Dep<span class="token operator">&gt;</span>
+<span class="token comment">// 定义了全局变量targetMap来存储Effect，它的存储结构如下</span>
+<span class="token comment">// targetMap  { target -&gt; KeyToDepMap }</span>
+<span class="token comment">// KeyToDepMap { [key in target] -&gt; Set&lt;ReactiveEffect&gt; }</span>
+<span class="token comment">// 也就是说当target上的某个key值被添加为依赖时，当前的Effect就会被添加到targetMap中</span>
+<span class="token keyword">const</span> targetMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">WeakMap</span><span class="token operator">&lt;</span>any<span class="token punctuation">,</span> KeyToDepMap<span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">track</span><span class="token punctuation">(</span><span class="token parameter">target<span class="token operator">:</span> object<span class="token punctuation">,</span> type<span class="token operator">:</span> TrackOpTypes<span class="token punctuation">,</span> key<span class="token operator">:</span> unknown</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 如果shouldTrack为false，或者没有在effect中访问，则直接返回</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>shouldTrack <span class="token operator">||</span> activeEffect <span class="token operator">===</span> <span class="token keyword">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 通过target拿到targetMap上对应的Set&lt;ReactiveEffect&gt;</span>
+  <span class="token comment">// 如果没有则创建一个并添加到targetMap上</span>
+  <span class="token keyword">let</span> depsMap <span class="token operator">=</span> targetMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>depsMap<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    targetMap<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> <span class="token punctuation">(</span>depsMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Map</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 通过key拿到KeyToDepMap上对应的Set&lt;ReactiveEffect&gt;</span>
+  <span class="token comment">// 如果没有则创建一个并添加到KeyToDepMap上</span>
+  <span class="token keyword">let</span> dep <span class="token operator">=</span> depsMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>dep<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    depsMap<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token punctuation">(</span>dep <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Set</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 如果当前的key对应的Set&lt;ReactiveEffect&gt;也就是dep没有包含activeEffect</span>
+  <span class="token comment">// 则添加到dep中，避免重复添加同一个Effect</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>dep<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">(</span>activeEffect<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    dep<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>activeEffect<span class="token punctuation">)</span>
+    <span class="token comment">// 同时Effect上的deps属性也将这个key的dep保存起来</span>
+    <span class="token comment">// 方便清除</span>
+    activeEffect<span class="token punctuation">.</span>deps<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>dep<span class="token punctuation">)</span>
+    <span class="token comment">// 如果是开发环境，并且设置了onTrack</span>
+    <span class="token comment">// 那么会执行onTack方法，并将依赖的信息传递出去，这应该是方便开发的时候调试用的</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> activeEffect<span class="token punctuation">.</span>options<span class="token punctuation">.</span>onTrack<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      activeEffect<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">onTrack</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+        effect<span class="token operator">:</span> activeEffect<span class="token punctuation">,</span>
+        target<span class="token punctuation">,</span>
+        type<span class="token punctuation">,</span>
+        key
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre></div><p>收集依赖的过程其实很简单，就是将当前的activeEffect添加到targetMap上，并且将需要添加的key的dep添加到activeEffect的deps上。</p> <h2 id="派发更新"><a href="#派发更新" class="header-anchor">#</a> 派发更新</h2> <div class="language-js extra-class"><pre class="language-js"><code>
+<span class="token comment">// 当通过以下操作修改响应式对象的值时，就会派发更新</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token keyword">enum</span> TriggerOpTypes <span class="token punctuation">{</span>
+  <span class="token constant">SET</span> <span class="token operator">=</span> <span class="token string">'set'</span><span class="token punctuation">,</span>
+  <span class="token constant">ADD</span> <span class="token operator">=</span> <span class="token string">'add'</span><span class="token punctuation">,</span>
+  <span class="token constant">DELETE</span> <span class="token operator">=</span> <span class="token string">'delete'</span><span class="token punctuation">,</span>
+  <span class="token constant">CLEAR</span> <span class="token operator">=</span> <span class="token string">'clear'</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">trigger</span><span class="token punctuation">(</span>
+  <span class="token parameter">target<span class="token operator">:</span> object<span class="token punctuation">,</span>
+  type<span class="token operator">:</span> TriggerOpTypes<span class="token punctuation">,</span>
+  key<span class="token operator">?</span><span class="token operator">:</span> unknown<span class="token punctuation">,</span>
+  newValue<span class="token operator">?</span><span class="token operator">:</span> unknown<span class="token punctuation">,</span>
+  oldValue<span class="token operator">?</span><span class="token operator">:</span> unknown<span class="token punctuation">,</span>
+  oldTarget<span class="token operator">?</span><span class="token operator">:</span> Map<span class="token operator">&lt;</span>unknown<span class="token punctuation">,</span> unknown<span class="token operator">&gt;</span> <span class="token operator">|</span> Set<span class="token operator">&lt;</span>unknown<span class="token operator">&gt;</span></span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 通过target拿到targetMap上的KeyToDepMap</span>
+  <span class="token comment">// 如果不存在，则证明该响应式对象没有被依赖，直接返回</span>
+  <span class="token keyword">const</span> depsMap <span class="token operator">=</span> targetMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>depsMap<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// never been tracked</span>
+    <span class="token keyword">return</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 创建一个Set对象effects用来保存将要执行的所有Effect</span>
+  <span class="token keyword">const</span> effects <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Set</span><span class="token operator">&lt;</span>ReactiveEffect<span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment">// 通过add方法添加将要执行的Effect到effects中</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">add</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">effectsToAdd<span class="token operator">:</span> Set<span class="token operator">&lt;</span>ReactiveEffect<span class="token operator">&gt;</span> <span class="token operator">|</span> <span class="token keyword">undefined</span></span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>effectsToAdd<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      effectsToAdd<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token parameter">effect</span> <span class="token operator">=&gt;</span> effects<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 如果是Map、Set的清除操作，那么所有被依赖的key值的Eeffect都要执行</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">CLEAR</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// collection being cleared</span>
+    <span class="token comment">// trigger all effects for target</span>
+    depsMap<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>add<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">===</span> <span class="token string">'length'</span> <span class="token operator">&amp;&amp;</span> <span class="token function">isArray</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果依赖了Array的length属性，那么所有依赖length属性的Effect都要执行</span>
+    <span class="token comment">// 并且依赖了比新的length的值大的key的Effect也要执行</span>
+    <span class="token comment">// 因为当设置了length时，所有大于length的key的值都会改变</span>
+    depsMap<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">dep<span class="token punctuation">,</span> key</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">===</span> <span class="token string">'length'</span> <span class="token operator">||</span> key <span class="token operator">&gt;=</span> <span class="token punctuation">(</span>newValue <span class="token keyword">as</span> number<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">add</span><span class="token punctuation">(</span>dep<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 接下来是 SET | ADD | DELETE 操作需要添加的Effect</span>
+    <span class="token comment">// 如果key存在，则直接拿到depsMap上对应key值的Effect</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">!==</span> <span class="token keyword">void</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">add</span><span class="token punctuation">(</span>depsMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果是添加key的操作或者非数组的删除key的操作，isAddOrDelete为true</span>
+    <span class="token keyword">const</span> isAddOrDelete <span class="token operator">=</span>
+      type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">ADD</span> <span class="token operator">||</span>
+      <span class="token punctuation">(</span>type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">DELETE</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span><span class="token function">isArray</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token comment">// 在之前分析collectionHandlers的实现时，调用除了keys的迭代方法和size属性时依赖的是ITERATE_KEY</span>
+    <span class="token comment">// </span>
+    <span class="token comment">// 如果isAddOrDelete为true，或者是调用Map.prototype.set修改key的值时</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      isAddOrDelete <span class="token operator">||</span>
+      <span class="token punctuation">(</span>type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">SET</span> <span class="token operator">&amp;&amp;</span> target <span class="token keyword">instanceof</span> <span class="token class-name">Map</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">add</span><span class="token punctuation">(</span>depsMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token function">isArray</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token string">'length'</span> <span class="token operator">:</span> <span class="token constant">ITERATE_KEY</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 在之前分析collectionHandlers的实现时，调用Map.prototype.keys时，依赖的key为MAP_KEY_ITERATE_KEY</span>
+    <span class="token comment">// 所以当在Map上添加或者删除key时，应该添加MAP_KEY_ITERATE_KEY对应的Effect</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>isAddOrDelete <span class="token operator">&amp;&amp;</span> target <span class="token keyword">instanceof</span> <span class="token class-name">Map</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">add</span><span class="token punctuation">(</span>depsMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token constant">MAP_KEY_ITERATE_KEY</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 定义run方法执行Effect</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">run</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">effect<span class="token operator">:</span> ReactiveEffect</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果是开发环境，并且设置了onTrigger</span>
+    <span class="token comment">// 那么会执行onTrigger方法，并将派发更新的信息传递出去，方便开发的时候调试用的</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> effect<span class="token punctuation">.</span>options<span class="token punctuation">.</span>onTrigger<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      effect<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">onTrigger</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+        effect<span class="token punctuation">,</span>
+        target<span class="token punctuation">,</span>
+        key<span class="token punctuation">,</span>
+        type<span class="token punctuation">,</span>
+        newValue<span class="token punctuation">,</span>
+        oldValue<span class="token punctuation">,</span>
+        oldTarget
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果设置了scheduler那么执行scheduler方法，否则执行effect本身</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>effect<span class="token punctuation">.</span>options<span class="token punctuation">.</span>scheduler<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      effect<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">scheduler</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token function">effect</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 遍历所有要执行的Effect，传入run方法执行</span>
+  effects<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>run<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
       ←
       <a href="/vue-next-analysis/reactivity/ref.html" class="prev">
         ref
@@ -20,6 +290,6 @@
       </a>
       →
     </span></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.21563d45.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/7.f29edc2c.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.434bbc7d.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/7.5486d672.js" defer></script>
   </body>
 </html>
