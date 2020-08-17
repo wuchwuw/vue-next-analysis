@@ -1,4 +1,4 @@
-## reactive
+## Reactive
 
 Reactivity Api是Vue3.x中创建响应式对象的核心api，它的基本实现原理是通过Proxy来拦截对象的操作，并由此收集依赖或派发更新。
 Reactivity Api的实现并没有那么复杂，只需记住通过Reactivity Api创建的对象都是Proxy对象，它的核心api有以下几个:
@@ -13,7 +13,7 @@ Reactivity api除了支持基本的plain object和array外，还支持map、weak
 ### 一些概念
 
 普通对象：Object、Array、Map、Weakmap、Set、Weakset中的一种
-代理对象：普通对象传入Reactivity Api后返回的Proxy对象
+代理对象：普通对象传入Reactivity Api后创建并返回的Proxy对象
 原始对象：创建Proxy对象的target对象，原始对象有可能是普通对象也可能是代理对象
 
 ### 相关源码
