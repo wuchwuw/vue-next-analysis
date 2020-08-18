@@ -7,7 +7,7 @@
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.434bbc7d.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/7.5486d672.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.7105c1f8.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.bf90ca2e.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.a40da65a.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/7.f267b660.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.3c95c77d.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.192e52e7.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
@@ -240,9 +240,14 @@ type KeyToDepMap <span class="token operator">=</span> Map<span class="token ope
     <span class="token keyword">const</span> isAddOrDelete <span class="token operator">=</span>
       type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">ADD</span> <span class="token operator">||</span>
       <span class="token punctuation">(</span>type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">DELETE</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span><span class="token function">isArray</span><span class="token punctuation">(</span>target<span class="token punctuation">)</span><span class="token punctuation">)</span>
-    <span class="token comment">// 在之前分析collectionHandlers的实现时，调用除了keys的迭代方法和size属性时依赖的是ITERATE_KEY</span>
-    <span class="token comment">// </span>
-    <span class="token comment">// 如果isAddOrDelete为true，或者是调用Map.prototype.set修改key的值时</span>
+    <span class="token comment">// 只有在以下情况中，才会依赖ITERATE_KEY</span>
+    <span class="token comment">// 1、在collectionHandlers中，调用forEach、entries、values、访问属性size等</span>
+    <span class="token comment">// 在effect中调用以上方法迭代Map或者Set时都会依赖ITERATE_KEY，所以在Set中添加或者删除值时应该添加ITERATE_KEY的Effect</span>
+    <span class="token comment">// 而在Map中除了会迭代key值同时也会迭代value值，所以不仅是添加删除key，修改value的操作也应该添加ITERATE_KEY的Effect</span>
+    <span class="token comment">// 2、在baseHandlers中，拦截了Object或者Array的ownKeys操作</span>
+    <span class="token comment">// 在effect中迭代Object或者Array的key值时会触发ownKeys并依赖ITERATE_KEY，</span>
+    <span class="token comment">// 所以Object和Array添加或者删除key值的操作应该添加ITERATE_KEY的Effect</span>
+    <span class="token comment">// 但是在Array中，key值的改变只会变化在长度上，所以这里Arry只需要添加length的Effect</span>
     <span class="token keyword">if</span> <span class="token punctuation">(</span>
       isAddOrDelete <span class="token operator">||</span>
       <span class="token punctuation">(</span>type <span class="token operator">===</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">SET</span> <span class="token operator">&amp;&amp;</span> target <span class="token keyword">instanceof</span> <span class="token class-name">Map</span><span class="token punctuation">)</span>
@@ -290,6 +295,6 @@ type KeyToDepMap <span class="token operator">=</span> Map<span class="token ope
       </a>
       →
     </span></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.434bbc7d.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/7.5486d672.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.a40da65a.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/7.f267b660.js" defer></script>
   </body>
 </html>

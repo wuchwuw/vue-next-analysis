@@ -3,19 +3,89 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>hello computed | VueNextAnalysis</title>
+    <title>Computed | VueNextAnalysis</title>
     <meta name="generator" content="VuePress 1.5.2">
     
     <meta name="description" content="vue3.x源码分析">
-    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.434bbc7d.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/6.7105c1f8.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.5486d672.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.bf90ca2e.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.a40da65a.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/6.3c95c77d.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.d0a9eaf2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f267b660.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.192e52e7.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
     <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
   </head>
   <body>
-    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" aria-current="page" class="active sidebar-link">computed</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/computed.html#hello-computed" class="sidebar-link">hello computed</a></li></ul></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="hello-computed"><a href="#hello-computed" class="header-anchor">#</a> hello computed</h2></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Reactivity</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" aria-current="page" class="active sidebar-link">computed</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/reactivity/computed.html#computed" class="sidebar-link">Computed</a></li></ul></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="computed"><a href="#computed" class="header-anchor">#</a> Computed</h2> <p>了解完Ref和Effect再来看Computed就比较简单了，Vue3.x的Computed和2.x的使用方法类似，它的核心就是基于Effect实现的。
+当计算Computed的值时，会收集Computed中函数中的依赖，当依赖改变时，再次访问Computed会重新计算结果并返回。</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 从computed方法的参数类型看到，computed支持传入一个函数或者是一个配置了getter、setter的对象</span>
+<span class="token comment">// 从computed方法的返回类型可以看到，computed本身是一个Ref类型的对象</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> computed<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>getter<span class="token operator">:</span> ComputedGetter<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span><span class="token punctuation">)</span><span class="token operator">:</span> ComputedRef<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> computed<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  options<span class="token operator">:</span> WritableComputedOptions<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+<span class="token punctuation">)</span><span class="token operator">:</span> WritableComputedRef<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> computed<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span><span class="token punctuation">(</span>
+  getterOrOptions<span class="token operator">:</span> ComputedGetter<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span> <span class="token operator">|</span> WritableComputedOptions<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">let</span> getter<span class="token operator">:</span> ComputedGetter<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+  <span class="token keyword">let</span> setter<span class="token operator">:</span> ComputedSetter<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+  <span class="token comment">// 当传入的getterOrOptions是一个函数时，赋值给变量getter</span>
+  <span class="token comment">// 当传入的getterOrOptions是对象时，拿到get、set方法赋值给getter、setter</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isFunction</span><span class="token punctuation">(</span>getterOrOptions<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    getter <span class="token operator">=</span> getterOrOptions
+    setter <span class="token operator">=</span> __DEV__
+      <span class="token operator">?</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+          console<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">'Write operation failed: computed value is readonly'</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token operator">:</span> <span class="token constant">NOOP</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    getter <span class="token operator">=</span> getterOrOptions<span class="token punctuation">.</span>get
+    setter <span class="token operator">=</span> getterOrOptions<span class="token punctuation">.</span>set
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 设置变量dirty，如果dirty为true则代表应该重新计算computed的值</span>
+  <span class="token keyword">let</span> dirty <span class="token operator">=</span> <span class="token boolean">true</span>
+  <span class="token keyword">let</span> value<span class="token operator">:</span> <span class="token constant">T</span>
+  <span class="token keyword">let</span> computed<span class="token operator">:</span> ComputedRef<span class="token operator">&lt;</span><span class="token constant">T</span><span class="token operator">&gt;</span>
+  <span class="token comment">// 创建一个Effect并且将getter作为参数传入</span>
+  <span class="token keyword">const</span> runner <span class="token operator">=</span> <span class="token function">effect</span><span class="token punctuation">(</span>getter<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 配置lazy为true，所以effect创建的时候不会执行</span>
+    lazy<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token comment">// 设置了scheduler方法，所以当getter中依赖的响应式对象改变时，会执行scheduler而不是effect本身</span>
+    <span class="token function-variable function">scheduler</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+      <span class="token comment">// scheduler并没有重新计算computed的值</span>
+      <span class="token comment">// 而是将dirty变为true，当dirty为true时代表computed的值已经发生改变</span>
+      <span class="token comment">// 所以也要派发更新到其他依赖了computed的Effect</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>dirty<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        dirty <span class="token operator">=</span> <span class="token boolean">true</span>
+        <span class="token function">trigger</span><span class="token punctuation">(</span>computed<span class="token punctuation">,</span> TriggerOpTypes<span class="token punctuation">.</span><span class="token constant">SET</span><span class="token punctuation">,</span> <span class="token string">'value'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token comment">// computed本身是一个Ref类型的对象</span>
+  computed <span class="token operator">=</span> <span class="token punctuation">{</span>
+    __v_isRef<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span>ReactiveFlags<span class="token punctuation">.</span><span class="token constant">IS_READONLY</span><span class="token punctuation">]</span><span class="token operator">:</span>
+      <span class="token function">isFunction</span><span class="token punctuation">(</span>getterOrOptions<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token operator">!</span>getterOrOptions<span class="token punctuation">.</span>set<span class="token punctuation">,</span>
+
+    <span class="token comment">// expose effect so computed can be stopped</span>
+    effect<span class="token operator">:</span> runner<span class="token punctuation">,</span>
+    <span class="token comment">// 当访问value时，如果dirty为true，重新执行runner返回getter的结果</span>
+    <span class="token comment">// 并调用track添加依赖</span>
+    <span class="token keyword">get</span> <span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>dirty<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        value <span class="token operator">=</span> <span class="token function">runner</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        dirty <span class="token operator">=</span> <span class="token boolean">false</span>
+      <span class="token punctuation">}</span>
+      <span class="token function">track</span><span class="token punctuation">(</span>computed<span class="token punctuation">,</span> TrackOpTypes<span class="token punctuation">.</span><span class="token constant">GET</span><span class="token punctuation">,</span> <span class="token string">'value'</span><span class="token punctuation">)</span>
+      <span class="token keyword">return</span> value
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// 当直接设置value的值时，如果没有传入set方法，在开发环境中会有警告</span>
+    <span class="token keyword">set</span> <span class="token function">value</span><span class="token punctuation">(</span><span class="token parameter">newValue<span class="token operator">:</span> <span class="token constant">T</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">setter</span><span class="token punctuation">(</span>newValue<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span> <span class="token keyword">as</span> any
+  <span class="token keyword">return</span> computed
+<span class="token punctuation">}</span>
+
+</code></pre></div><h3 id="总结"><a href="#总结" class="header-anchor">#</a> 总结</h3> <p>分析完了Computed的实现，可以总结出Computed有以下特性：</p> <ul><li><p>本身是一个Ref类型的对象，所以拥有Ref类型对象的特性，比如响应式、嵌套在响应式对象中默认展开等</p></li> <li><p>创建或者Computed依赖的值发生改变时，并不会立即重新计算，而是等到下次访问的时候才重新计算Computed的值</p></li></ul></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
       ←
       <a href="/vue-next-analysis/reactivity/effect.html" class="prev">
         effect
       </a></span> <!----></p></div> </main></div><div class="global-ui"></div></div>
-    <script src="/vue-next-analysis/assets/js/app.434bbc7d.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/6.7105c1f8.js" defer></script>
+    <script src="/vue-next-analysis/assets/js/app.a40da65a.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/6.3c95c77d.js" defer></script>
   </body>
 </html>
