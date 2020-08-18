@@ -194,7 +194,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
 
 收集依赖的过程其实很简单，就是将当前的activeEffect添加到targetMap上，并且将需要添加的key的dep添加到activeEffect的deps上。
 
-
 ## 派发更新
 
 ```js
@@ -254,9 +253,14 @@ export function trigger(
     const isAddOrDelete =
       type === TriggerOpTypes.ADD ||
       (type === TriggerOpTypes.DELETE && !isArray(target))
-    // 在之前分析collectionHandlers的实现时，调用除了keys的迭代方法和size属性时依赖的是ITERATE_KEY
-    // 
-    // 如果isAddOrDelete为true，或者是调用Map.prototype.set修改key的值时
+    // 只有在以下情况中，才会依赖ITERATE_KEY
+    // 1、在collectionHandlers中，调用forEach、entries、values、访问属性size等
+    // 在effect中调用以上方法迭代Map或者Set时都会依赖ITERATE_KEY，所以在Set中添加或者删除值时应该添加ITERATE_KEY的Effect
+    // 而在Map中除了会迭代key值同时也会迭代value值，所以不仅是添加删除key，修改value的操作也应该添加ITERATE_KEY的Effect
+    // 2、在baseHandlers中，拦截了Object或者Array的ownKeys操作
+    // 在effect中迭代Object或者Array的key值时会触发ownKeys并依赖ITERATE_KEY，
+    // 所以Object和Array添加或者删除key值的操作应该添加ITERATE_KEY的Effect
+    // 但是在Array中，key值的改变只会变化在长度上，所以这里Arry只需要添加length的Effect
     if (
       isAddOrDelete ||
       (type === TriggerOpTypes.SET && target instanceof Map)

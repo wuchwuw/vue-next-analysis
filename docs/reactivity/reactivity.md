@@ -871,7 +871,68 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 
 ## 类型
 
-// todo
+```js
+// reactive api返回的类型为UnwrapNestedRefs<T>
+export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+// 如果传入的target的类型T为Ref类型，那么返回值的类型也是Ref，否则将类型T传入UnwrapRef解引用
+type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
+// 如果类型T是一个Ref那么应该拿到传入这个Ref的类型V，否则还是将T类型传入UnwrapRefSimple
+export type UnwrapRef<T> = T extends Ref<infer V>
+  ? UnwrapRefSimple<V>
+  : UnwrapRefSimple<T>
+// 如果T是Function、CollectionTypes、BaseTypes、RefUnwrapBailTypes中的一种，那么直接返回T类型
+// RefUnwrapBailTypes是可以让用户自定义的类型
+// 如果T是Array，则遍历Array，递归调用UnwrapRefSimple
+// 如果T是object，那么将T传入UnwrappedObject中
+// 不满足以上情况，都直接返回类型T
+type UnwrapRefSimple<T> = T extends
+  | Function
+  | CollectionTypes
+  | BaseTypes
+  | Ref
+  | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+  ? T
+  : T extends Array<any>
+    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+    : T extends object ? UnwrappedObject<T> : T
+
+// UnwrappedObject包含了2个部分
+// 1、遍历object的所有key，递归调用UnwrapRef
+// 2、对象上一些内置Symbol，不会出现在keyof中，所以还需要覆盖一些内置Symbol的类型
+type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> } & SymbolExtract<T>
+
+// 当object的上某个属性为以下Symbol值的一种时，先通过infer关键字获取当前Symbol属性的值的类型V
+// 然后返回key为Symbol，值为V的类型，否则返回{}
+// 例如：
+// 当响应式对象为 { [Symbol.match]: () => {}, a: 1, b: '2' } 时
+// 传入UnwrappedObject后类型为
+// { a: number, b: string } & { [Symbol.match]: () => void }
+type SymbolExtract<T> = (T extends { [Symbol.asyncIterator]: infer V }
+  ? { [Symbol.asyncIterator]: V }
+  : {}) &
+  (T extends { [Symbol.hasInstance]: infer V }
+    ? { [Symbol.hasInstance]: V }
+    : {}) &
+  (T extends { [Symbol.isConcatSpreadable]: infer V }
+    ? { [Symbol.isConcatSpreadable]: V }
+    : {}) &
+  (T extends { [Symbol.iterator]: infer V } ? { [Symbol.iterator]: V } : {}) &
+  (T extends { [Symbol.match]: infer V } ? { [Symbol.match]: V } : {}) &
+  (T extends { [Symbol.matchAll]: infer V } ? { [Symbol.matchAll]: V } : {}) &
+  (T extends { [Symbol.replace]: infer V } ? { [Symbol.replace]: V } : {}) &
+  (T extends { [Symbol.search]: infer V } ? { [Symbol.search]: V } : {}) &
+  (T extends { [Symbol.species]: infer V } ? { [Symbol.species]: V } : {}) &
+  (T extends { [Symbol.split]: infer V } ? { [Symbol.split]: V } : {}) &
+  (T extends { [Symbol.toPrimitive]: infer V }
+    ? { [Symbol.toPrimitive]: V }
+    : {}) &
+  (T extends { [Symbol.toStringTag]: infer V }
+    ? { [Symbol.toStringTag]: V }
+    : {}) &
+  (T extends { [Symbol.unscopables]: infer V }
+    ? { [Symbol.unscopables]: V }
+    : {})
+```
 
 ## 总结
 
