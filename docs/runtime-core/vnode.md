@@ -134,10 +134,222 @@ Vue官方提供了一个在线编译器[Template Explorer](https://vue-next-temp
 ], 64 /* STABLE_FRAGMENT */))
 ```
 
-以上的模板基本包含了所有vnode的PatchFlag类型，这里可以注意一下Vue3.x版本已经支持模板有多个根节点，在这种情况下Vue会自动帮你生成一个
-Stable Fragment节点作为vnode tree的根节点
+以上的模板基本包含了所有vnode的PatchFlag类型，这里可以注意一下Vue3.x版本已经支持模板有多个根节点，在这种情况下Vue会自动生成一个Stable Fragment节点作为vnode tree的根节点。
 
 
 ### 创建vnode以及收集动态节点的过程
 
-我们以上面生成的渲染函数为例子
+```html
+<!-- bock1 -->
+<div>
+  <!-- bock2 -->
+  <div v-if="state">
+    <div>
+      <span>静态节点</span>
+      <span>动态节点1{{state}}</span>
+    </div>
+  </div>
+  <!-- bock3 -->
+  <div v-for="item in state">
+  </div>
+  <div>
+    <span>静态节点</span>
+    <span>动态节点2{{state}}</span>
+  </div>
+</div>
+```
+
+```js
+(_openBlock(), _createBlock("div", null, [
+  (_ctx.state)
+    ? (_openBlock(), _createBlock("div", { key: 0 }, [
+        _createVNode("div", null, [
+          _createVNode("span", null, "静态节点"),
+          _createVNode("span", null, _toDisplayString(_ctx.state), 1 /* TEXT */)
+        ])
+      ]))
+    : _createCommentVNode("v-if", true),
+  (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.state, (item) => {
+    return (_openBlock(), _createBlock("div", null, " bock2 "))
+  }), 256 /* UNKEYED_FRAGMENT */)),
+  _createVNode("div", null, [
+    _createVNode("span", null, "静态节点"),
+    _createVNode("span", null, _toDisplayString(_ctx.state), 1 /* TEXT */)
+  ])
+]))
+```
+
+我们以上面的模板生成的渲染函数为例子来分析执行渲染函数创建vnode的过程。在Vue3.x中，Vue会将模板分成一个个block，用于收集
+动态节点。模板的根节点、有v-for或者v-if指令的节点都是一个block，一个block内的所有动态节点都会添加到block节点生成的
+vnode的dynamicChildren属性上，在组件更新的时候只需要对比所有动态节点即可。从上面生成的渲染函数可以看到，在执行_createVNode函数生成vnode时，根节点、有v-for或v-if指令的节点在创建vnode之前都会调用_openBlock和_createBlock打开并
+创建一个block：
+
+```js
+// openBlock根据传入的disableTracking参数来设置当前的currentBlock
+// 并将当前的currentBlock添加到blockStack栈中
+// 跟openBlock对应的还有closeBlock
+export function openBlock(disableTracking = false) {
+  blockStack.push((currentBlock = disableTracking ? null : []))
+}
+
+export function closeBlock() {
+  blockStack.pop()
+  currentBlock = blockStack[blockStack.length - 1] || null
+}
+```
+
+根据以上渲染函数，首先调用_openBlock打开根节点block1，然后先从子节点开始创建vnode，此时子节点恰好存在v-if指令，
+所以会再调用一次_openBlock打开block2，此时blockStack = [[], []] currentBlock = []，currentBlock收集的
+为block2的动态节点，然后开始创建block2的子节点：
+
+```js
+
+// 创建vnode
+function _createVNode(
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
+  props: (Data & VNodeProps) | null = null,
+  children: unknown = null,
+  patchFlag: number = 0,
+  dynamicProps: string[] | null = null,
+  isBlockNode = false
+): VNode {
+  ...
+
+  // 根据传入的type来确定shapeFlag值
+  const shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : __FEATURE_SUSPENSE__ && isSuspense(type)
+      ? ShapeFlags.SUSPENSE
+      : isTeleport(type)
+        ? ShapeFlags.TELEPORT
+        : isObject(type)
+          ? ShapeFlags.STATEFUL_COMPONENT
+          : isFunction(type)
+            ? ShapeFlags.FUNCTIONAL_COMPONENT
+            : 0
+
+  // 创建一个vnode对象，保存vnode相关的信息
+  const vnode: VNode = {
+    __v_isVNode: true,
+    [ReactiveFlags.SKIP]: true,
+    type,
+    props,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
+    scopeId: currentScopeId,
+    children: null,
+    component: null,
+    suspense: null,
+    dirs: null,
+    transition: null,
+    el: null,
+    anchor: null,
+    target: null,
+    targetAnchor: null,
+    staticCount: 0,
+    shapeFlag,
+    patchFlag,
+    dynamicProps,
+    dynamicChildren: null,
+    appContext: null
+  }
+
+  // 标准化子节点
+  // 根据子节点的类型添加shapeFlag
+  normalizeChildren(vnode, children)
+
+  // 判断当前节点是否应该添加到当前的block中
+  // 1、如果shouldTrack > 0，在某些情况下不应该将vnode添加当前的blcok中，此时会将shouldTrack设置为-1
+  // 例如存在v-noce指令的节点及其子节点
+  // 2、当前节点不是block节点
+  // 3、patchFlag > 0或者节点是一个组件节点，也就是存在动态信息的节点
+  // 4、patchFlag不等于PatchFlags.HYDRATE_EVENTS，这个patchFlag属于ssr相关，这里暂时不分析
+  if (
+    shouldTrack > 0 &&
+    // avoid a block node from tracking itself
+    !isBlockNode &&
+    // has current parent block
+    currentBlock &&
+    // presence of a patch flag indicates this node needs patching on updates.
+    // component nodes also should always be patched, because even if the
+    // component doesn't need to update, it needs to persist the instance on to
+    // the next vnode so that it can be properly unmounted later.
+    (patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
+    // the EVENTS flag is only for hydration and if it is the only flag, the
+    // vnode should not be considered dynamic due to handler caching.
+    patchFlag !== PatchFlags.HYDRATE_EVENTS
+  ) {
+    currentBlock.push(vnode)
+  }
+
+  return vnode
+}
+```
+
+当创建完block2的子节点后，会调用_createBlock方法创建block2节点。此时currentBlock添加了block2的动态节点<span>{{state}}</span>。
+
+```js
+
+export function createBlock(
+  type: VNodeTypes | ClassComponent,
+  props?: Record<string, any> | null,
+  children?: any,
+  patchFlag?: number,
+  dynamicProps?: string[]
+): VNode {
+  // 调用createVNode创建block2节点的vnode
+  // 注意这里传入的最后一个参数isBlockNode为true
+  // 所以block节点不会添加到currentBlock中
+  const vnode = createVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    true /* isBlock: prevent a block from tracking itself */
+  )
+  // 将block2下所有的动态节点也就是currentBlock保存到block2节点vnode的dynamicChildren属性上
+  vnode.dynamicChildren = currentBlock || EMPTY_ARR
+  // 调用closeBlock，关闭当前blcok，并且将保存当前block2动态节点的currentBlock出栈
+  // 将parent block，也就是block1的动态节点重新赋值给currentBlock
+  closeBlock()
+
+  // 当前block2节点的vnode也是它的父block节点的动态节点
+  // 所以将当前节点添加到父block的动态节点中
+  if (currentBlock) {
+    currentBlock.push(vnode)
+  }
+  return vnode
+}
+```
+
+其他block的创建都是相同的过程，当执行完整个渲染函数之后，当前的block tree为：
+
+```js
+{
+  name: '根vnode(block1)'
+  dynamicChildren: [
+    {
+      name: 'v-if vnode(block2)',
+      dynamicChildren: [
+        {
+          name: '动态节点1',
+          dynamicChildren: null
+        }
+      ]
+    },
+    {
+      name: 'v-for vnode(block3),
+      dynamicChildren: null
+    },
+    {
+      name: '动态节点2',
+      dynamicChildren: null
+    }
+  ]
+}
+```
+
+这里要注意的是，v-for节点生成的block3的dynamicChildren为null，因为v-for创建的block
+
+通过分析vnode的创建过程，我们了解了Vue3.x中对于vnode的优化以及block tree的创建过程，
