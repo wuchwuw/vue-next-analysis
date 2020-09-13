@@ -187,6 +187,7 @@ vnode的dynamicChildren属性上，在组件更新的时候只需要对比所有
 ```js
 // openBlock根据传入的disableTracking参数来设置当前的currentBlock
 // 并将当前的currentBlock添加到blockStack栈中
+// 从上面的渲染函数可以看到，如果是v-for生成的block，这里传入的disableTracking是true，currentBlock = null
 // 跟openBlock对应的还有closeBlock
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
@@ -309,6 +310,9 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // 将block2下所有的动态节点也就是currentBlock保存到block2节点vnode的dynamicChildren属性上
+  // 这里要注意的是，如果当前创建的是是v-for的block vnode
+  // 那么currentBlock = null，此时不管v-for里面有没有动态节点dynamicChildren都是[]
+  // 因为v-for产生的block的子节点都是动态的，所以会默认更新所有子节点
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // 调用closeBlock，关闭当前blcok，并且将保存当前block2动态节点的currentBlock出栈
   // 将parent block，也就是block1的动态节点重新赋值给currentBlock
@@ -340,7 +344,7 @@ export function createBlock(
     },
     {
       name: 'v-for vnode(block3),
-      dynamicChildren: null
+      dynamicChildren: []
     },
     {
       name: '动态节点2',
@@ -350,6 +354,5 @@ export function createBlock(
 }
 ```
 
-这里要注意的是，v-for节点生成的block3的dynamicChildren为null，因为v-for创建的block
-
-通过分析vnode的创建过程，我们了解了Vue3.x中对于vnode的优化以及block tree的创建过程，
+通过分析vnode的创建过程，我们了解了Vue3.x中对于vnode的优化以及block tree的创建过程，这些优化会大大提升
+组件更新时的效率，接下来我们就继续分析组件更新的过程，看看Vue如何利用优化过的vnode来提升组件更新的效率。
