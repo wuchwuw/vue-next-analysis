@@ -200,6 +200,10 @@ function createAppAPI(render, hydrate) {
 
 ```
 
+在mount方法中，调用了在baseCreateRenderer中定义的render方法渲染根组件vnode，可以看到在render方法
+中执行了patch方法来处理根组件vnode，在分析patch过程之前，我们先来了解vnode的创建过程，以及Vue3.x中
+对vnode做了哪些优化。
+
 ## 根组件的patch过程
 
 ```js
