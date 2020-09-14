@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>vnode的patch过程 | VueNextAnalysis</title>
+    <meta name="generator" content="VuePress 1.5.2">
+    
+    <meta name="description" content="vue3.x源码分析">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.61e23bbe.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/11.61a3280b.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/10.d0561d25.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/12.e728dbd9.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/13.1629c365.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/14.84402eac.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.804d668d.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/6.3c95c77d.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.f267b660.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.192e52e7.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.80465036.js">
+    <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <!----></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><!---->  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>响应式原理</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>运行时</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/runtime-core/createApp.html" class="sidebar-link">创建一个Vue3.x应用</a></li><li><a href="/vue-next-analysis/runtime-core/vnode.html" class="sidebar-link">vnode详解</a></li><li><a href="/vue-next-analysis/runtime-core/updateComponent.html" class="sidebar-link">组件更新及diff过程</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>编译</span> <!----></p> <!----></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="vnode的patch过程"><a href="#vnode的patch过程" class="header-anchor">#</a> vnode的patch过程</h2> <div class="language-js extra-class"><pre class="language-js"><code><span class="token function">createApp</span><span class="token punctuation">(</span>App<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">mount</span><span class="token punctuation">(</span>document<span class="token punctuation">.</span><span class="token function">querySelector</span><span class="token punctuation">(</span><span class="token string">'#app'</span><span class="token punctuation">)</span>
+</code></pre></div><p>回顾之前分析的Vue3.x应用的创建过程，我们知道在createApp方法中传入的根组件最后会调用patch方法
+来执行根组件vnode的patch过程，在分析了vnode的创建过程后，我们对于vnode有了一个基本的了解，
+接下来我们通过分析patch过程，来了解Vue3.x对于不同vnode的处理过程：</p> <h3 id="patch"><a href="#patch" class="header-anchor">#</a> patch</h3> <div class="language-js extra-class"><pre class="language-js"><code>
+  <span class="token keyword">const</span> patch<span class="token operator">:</span> <span class="token function-variable function">PatchFn</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">n1<span class="token punctuation">,</span>
+    n2<span class="token punctuation">,</span>
+    container<span class="token punctuation">,</span>
+    anchor <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentComponent <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    optimized <span class="token operator">=</span> <span class="token boolean">false</span></span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果旧vnode存在，并且新旧vnode的type、key不同</span>
+    <span class="token comment">// 则先unmount旧节点，并将旧节点n1设置为null</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>n1 <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span><span class="token function">isSameVNodeType</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      anchor <span class="token operator">=</span> <span class="token function">getNextHostNode</span><span class="token punctuation">(</span>n1<span class="token punctuation">)</span>
+      <span class="token function">unmount</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+      n1 <span class="token operator">=</span> <span class="token keyword">null</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果patchFlag是PatchFlags.BAIL则跳过优化模式</span>
+    <span class="token comment">// 并将vnode的dynamicChildren设置为null</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>patchFlag <span class="token operator">===</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">BAIL</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      optimized <span class="token operator">=</span> <span class="token boolean">false</span>
+      n2<span class="token punctuation">.</span>dynamicChildren <span class="token operator">=</span> <span class="token keyword">null</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">const</span> <span class="token punctuation">{</span> type<span class="token punctuation">,</span> ref<span class="token punctuation">,</span> shapeFlag <span class="token punctuation">}</span> <span class="token operator">=</span> n2
+    <span class="token keyword">switch</span> <span class="token punctuation">(</span>type<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">case</span> Text<span class="token operator">:</span>
+        <span class="token comment">// 处理文本节点</span>
+        <span class="token function">processText</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">)</span>
+        <span class="token keyword">break</span>
+      <span class="token keyword">case</span> Comment<span class="token operator">:</span>
+        <span class="token comment">// 处理注释节点</span>
+        <span class="token function">processCommentNode</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">)</span>
+        <span class="token keyword">break</span>
+      <span class="token keyword">case</span> Static<span class="token operator">:</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>n1 <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">mountStaticNode</span><span class="token punctuation">(</span>n2<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">,</span> isSVG<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">patchStaticNode</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> container<span class="token punctuation">,</span> isSVG<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">break</span>
+      <span class="token keyword">case</span> Fragment<span class="token operator">:</span>
+        <span class="token comment">// 处理Fragment节点</span>
+        <span class="token function">processFragment</span><span class="token punctuation">(</span>
+          n1<span class="token punctuation">,</span>
+          n2<span class="token punctuation">,</span>
+          container<span class="token punctuation">,</span>
+          anchor<span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG<span class="token punctuation">,</span>
+          optimized
+        <span class="token punctuation">)</span>
+        <span class="token keyword">break</span>
+      <span class="token keyword">default</span><span class="token operator">:</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">ELEMENT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 处理elment节点</span>
+          <span class="token function">processElement</span><span class="token punctuation">(</span>
+            n1<span class="token punctuation">,</span>
+            n2<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG<span class="token punctuation">,</span>
+            optimized
+          <span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">COMPONENT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 处理组件节点</span>
+          <span class="token function">processComponent</span><span class="token punctuation">(</span>
+            n1<span class="token punctuation">,</span>
+            n2<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG<span class="token punctuation">,</span>
+            optimized
+          <span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">TELEPORT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 处理teleport节点</span>
+          <span class="token punctuation">;</span><span class="token punctuation">(</span>type <span class="token keyword">as</span> <span class="token keyword">typeof</span> TeleportImpl<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">process</span><span class="token punctuation">(</span>
+            n1 <span class="token keyword">as</span> TeleportVNode<span class="token punctuation">,</span>
+            n2 <span class="token keyword">as</span> TeleportVNode<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG<span class="token punctuation">,</span>
+            optimized<span class="token punctuation">,</span>
+            internals
+          <span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>__FEATURE_SUSPENSE__ <span class="token operator">&amp;&amp;</span> shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">SUSPENSE</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 处理suspense节点</span>
+          <span class="token punctuation">;</span><span class="token punctuation">(</span>type <span class="token keyword">as</span> <span class="token keyword">typeof</span> SuspenseImpl<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">process</span><span class="token punctuation">(</span>
+            n1<span class="token punctuation">,</span>
+            n2<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG<span class="token punctuation">,</span>
+            optimized<span class="token punctuation">,</span>
+            internals
+          <span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">'Invalid VNode type:'</span><span class="token punctuation">,</span> type<span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">(</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">typeof</span> type<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">)</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 设置ref</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>ref <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> parentComponent<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">setRef</span><span class="token punctuation">(</span>ref<span class="token punctuation">,</span> n1 <span class="token operator">&amp;&amp;</span> n1<span class="token punctuation">.</span>ref<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> n2<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+</code></pre></div><p>可以看到patch就是一个递归处理vnode节点的过程，根据编译和创建vnode时生成的type和shapeFlag来决定处理什么节点。</p> <h3 id="处理组件节点processcomponent"><a href="#处理组件节点processcomponent" class="header-anchor">#</a> 处理组件节点processComponent</h3> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 处理组件vnode</span>
+<span class="token keyword">const</span> <span class="token function-variable function">processComponent</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+  <span class="token parameter">n1<span class="token operator">:</span> VNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  n2<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+  container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+  anchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+  optimized<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 如果旧节点不存在则调用mountComponent，执行创建组件的逻辑</span>
+  <span class="token comment">// 否则调用updateComponent更新组件</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>n1 <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">mountComponent</span><span class="token punctuation">(</span>
+      n2<span class="token punctuation">,</span>
+      container<span class="token punctuation">,</span>
+      anchor<span class="token punctuation">,</span>
+      parentComponent<span class="token punctuation">,</span>
+      parentSuspense<span class="token punctuation">,</span>
+      isSVG<span class="token punctuation">,</span>
+      optimized
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">updateComponent</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> optimized<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h4 id="组件创建"><a href="#组件创建" class="header-anchor">#</a> 组件创建</h4> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 创建组件的逻辑</span>
+<span class="token keyword">const</span> mountComponent<span class="token operator">:</span> <span class="token function-variable function">MountComponentFn</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+  <span class="token parameter">initialVNode<span class="token punctuation">,</span>
+  container<span class="token punctuation">,</span>
+  anchor<span class="token punctuation">,</span>
+  parentComponent<span class="token punctuation">,</span>
+  parentSuspense<span class="token punctuation">,</span>
+  isSVG<span class="token punctuation">,</span>
+  optimized</span>
+<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 1、创建组件实例</span>
+  <span class="token keyword">const</span> instance<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">=</span> <span class="token punctuation">(</span>initialVNode<span class="token punctuation">.</span>component <span class="token operator">=</span> <span class="token function">createComponentInstance</span><span class="token punctuation">(</span>
+    initialVNode<span class="token punctuation">,</span>
+    parentComponent<span class="token punctuation">,</span>
+    parentSuspense
+  <span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token operator">...</span>
+  <span class="token comment">// 2、处理组件vnode上的props、执行组件的setup方法</span>
+  <span class="token function">setupComponent</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span>
+  <span class="token operator">...</span>
+  <span class="token comment">// 3、创建组件Effect</span>
+  <span class="token function">setupRenderEffect</span><span class="token punctuation">(</span>
+    instance<span class="token punctuation">,</span>
+    initialVNode<span class="token punctuation">,</span>
+    container<span class="token punctuation">,</span>
+    anchor<span class="token punctuation">,</span>
+    parentSuspense<span class="token punctuation">,</span>
+    isSVG<span class="token punctuation">,</span>
+    optimized
+  <span class="token punctuation">)</span>
+  <span class="token operator">...</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>1、创建组件实例</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">createComponentInstance</span><span class="token punctuation">(</span>
+  <span class="token parameter">vnode<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+  parent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  suspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span></span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 拿到根组件的定义</span>
+  <span class="token keyword">const</span> type <span class="token operator">=</span> vnode<span class="token punctuation">.</span>type <span class="token keyword">as</span> ConcreteComponent
+  <span class="token comment">// 拿到全局上下文</span>
+  <span class="token keyword">const</span> appContext <span class="token operator">=</span>
+    <span class="token punctuation">(</span>parent <span class="token operator">?</span> parent<span class="token punctuation">.</span>appContext <span class="token operator">:</span> vnode<span class="token punctuation">.</span>appContext<span class="token punctuation">)</span> <span class="token operator">||</span> emptyAppContext
+  <span class="token comment">// 创建组件实例</span>
+  <span class="token keyword">const</span> instance<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">=</span> <span class="token punctuation">{</span>
+    uid<span class="token operator">:</span> uid<span class="token operator">++</span><span class="token punctuation">,</span>
+    vnode<span class="token punctuation">,</span>
+    type<span class="token punctuation">,</span>
+    parent<span class="token punctuation">,</span>
+    appContext<span class="token punctuation">,</span>
+    root<span class="token operator">:</span> <span class="token keyword">null</span><span class="token operator">!</span><span class="token punctuation">,</span> <span class="token comment">// to be immediately set</span>
+    next<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    subTree<span class="token operator">:</span> <span class="token keyword">null</span><span class="token operator">!</span><span class="token punctuation">,</span> <span class="token comment">// will be set synchronously right after creation</span>
+    update<span class="token operator">:</span> <span class="token keyword">null</span><span class="token operator">!</span><span class="token punctuation">,</span> <span class="token comment">// will be set synchronously right after creation</span>
+    render<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    proxy<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    withProxy<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    effects<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    provides<span class="token operator">:</span> parent <span class="token operator">?</span> parent<span class="token punctuation">.</span>provides <span class="token operator">:</span> Object<span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>appContext<span class="token punctuation">.</span>provides<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    accessCache<span class="token operator">:</span> <span class="token keyword">null</span><span class="token operator">!</span><span class="token punctuation">,</span>
+    renderCache<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+
+    <span class="token comment">// state</span>
+    ctx<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    props<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    attrs<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    slots<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    refs<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    setupState<span class="token operator">:</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">,</span>
+    setupContext<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+
+    <span class="token comment">// suspense related</span>
+    suspense<span class="token punctuation">,</span>
+    asyncDep<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    asyncResolved<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+
+    <span class="token comment">// lifecycle hooks</span>
+    <span class="token comment">// not using enums here because it results in computed properties</span>
+    isMounted<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    isUnmounted<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    isDeactivated<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    bc<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    c<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    bm<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    m<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    bu<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    u<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    um<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    bum<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    da<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    a<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    rtg<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    rtc<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    ec<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    emit<span class="token operator">:</span> <span class="token keyword">null</span> <span class="token keyword">as</span> any<span class="token punctuation">,</span> <span class="token comment">// to be set immediately</span>
+    emitted<span class="token operator">:</span> <span class="token keyword">null</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    instance<span class="token punctuation">.</span>ctx <span class="token operator">=</span> <span class="token function">createRenderContext</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    instance<span class="token punctuation">.</span>ctx <span class="token operator">=</span> <span class="token punctuation">{</span> _<span class="token operator">:</span> instance <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 将根组件的实例保存在实例的root属性上</span>
+  instance<span class="token punctuation">.</span>root <span class="token operator">=</span> parent <span class="token operator">?</span> parent<span class="token punctuation">.</span>root <span class="token operator">:</span> instance
+  <span class="token comment">// 将emit方法的this指向实例，并保存到emit属性上</span>
+  instance<span class="token punctuation">.</span>emit <span class="token operator">=</span> <span class="token function">emit</span><span class="token punctuation">.</span><span class="token function">bind</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">,</span> instance<span class="token punctuation">)</span>
+
+  <span class="token keyword">return</span> instance
+<span class="token punctuation">}</span>
+</code></pre></div><p>2、处理组件插槽、props，执行setup方法</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">setupComponent</span><span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token operator">:</span> ComponentInternalInstance<span class="token punctuation">,</span>
+  isSSR <span class="token operator">=</span> <span class="token boolean">false</span></span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  isInSSRComponentSetup <span class="token operator">=</span> isSSR
+
+  <span class="token keyword">const</span> <span class="token punctuation">{</span> props<span class="token punctuation">,</span> children<span class="token punctuation">,</span> shapeFlag <span class="token punctuation">}</span> <span class="token operator">=</span> instance<span class="token punctuation">.</span>vnode
+  <span class="token comment">//</span>
+  <span class="token keyword">const</span> isStateful <span class="token operator">=</span> shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">STATEFUL_COMPONENT</span>
+  <span class="token comment">// 处理props</span>
+  <span class="token function">initProps</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> props<span class="token punctuation">,</span> isStateful<span class="token punctuation">,</span> isSSR<span class="token punctuation">)</span>
+  <span class="token comment">// 处理slot</span>
+  <span class="token function">initSlots</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> children<span class="token punctuation">)</span>
+  <span class="token comment">// 如果是非函数组件，调用setupStatefulComponent执行setup</span>
+  <span class="token keyword">const</span> setupResult <span class="token operator">=</span> isStateful
+    <span class="token operator">?</span> <span class="token function">setupStatefulComponent</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> isSSR<span class="token punctuation">)</span>
+    <span class="token operator">:</span> <span class="token keyword">undefined</span>
+  isInSSRComponentSetup <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token keyword">return</span> setupResult
+<span class="token punctuation">}</span>
+</code></pre></div><p>执行setup方法</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">setupStatefulComponent</span><span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token operator">:</span> ComponentInternalInstance<span class="token punctuation">,</span>
+  isSSR<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 拿到实例上的组件定义</span>
+  <span class="token keyword">const</span> Component <span class="token operator">=</span> instance<span class="token punctuation">.</span>type <span class="token keyword">as</span> ComponentOptions
+  <span class="token operator">...</span>
+  instance<span class="token punctuation">.</span>accessCache <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+  <span class="token comment">// 代理组件上下文，将生成的代理对象保存在proxy上</span>
+  instance<span class="token punctuation">.</span>proxy <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Proxy</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span>ctx<span class="token punctuation">,</span> PublicInstanceProxyHandlers<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> <span class="token punctuation">{</span> setup <span class="token punctuation">}</span> <span class="token operator">=</span> Component
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>setup<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果定义了setup方法,先拿到保存在实例上的attrs、slots、emit</span>
+    <span class="token keyword">const</span> setupContext <span class="token operator">=</span> <span class="token punctuation">(</span>instance<span class="token punctuation">.</span>setupContext <span class="token operator">=</span>
+      setup<span class="token punctuation">.</span>length <span class="token operator">&gt;</span> <span class="token number">1</span> <span class="token operator">?</span> <span class="token function">createSetupContext</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">)</span>
+    <span class="token comment">// 设置currentInstance</span>
+    currentInstance <span class="token operator">=</span> instance
+    <span class="token comment">// 调用setup方法时暂定依赖收集</span>
+    <span class="token function">pauseTracking</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// 调用setup方法</span>
+    <span class="token keyword">const</span> setupResult <span class="token operator">=</span> <span class="token function">callWithErrorHandling</span><span class="token punctuation">(</span>
+      setup<span class="token punctuation">,</span>
+      instance<span class="token punctuation">,</span>
+      ErrorCodes<span class="token punctuation">.</span><span class="token constant">SETUP_FUNCTION</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span>__DEV__ <span class="token operator">?</span> <span class="token function">shallowReadonly</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span>props<span class="token punctuation">)</span> <span class="token operator">:</span> instance<span class="token punctuation">.</span>props<span class="token punctuation">,</span> setupContext<span class="token punctuation">]</span>
+    <span class="token punctuation">)</span>
+    <span class="token function">resetTracking</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    currentInstance <span class="token operator">=</span> <span class="token keyword">null</span>
+    <span class="token comment">// 处理setup方法返回的结果</span>
+    <span class="token function">handleSetupResult</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> setupResult<span class="token punctuation">,</span> isSSR<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果没有定义setup，直接执行finishComponentSetup方法</span>
+    <span class="token function">finishComponentSetup</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> isSSR<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>处理setup方法返回的结果</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">handleSetupResult</span><span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token operator">:</span> ComponentInternalInstance<span class="token punctuation">,</span>
+  setupResult<span class="token operator">:</span> unknown<span class="token punctuation">,</span>
+  isSSR<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 如果setup返回的是一个render函数，那么将它保存在实例的render属性上</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isFunction</span><span class="token punctuation">(</span>setupResult<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// setup returned an inline render function</span>
+    instance<span class="token punctuation">.</span>render <span class="token operator">=</span> setupResult <span class="token keyword">as</span> InternalRenderFunction
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isObject</span><span class="token punctuation">(</span>setupResult<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果返回的是一个对象，则代理这个对象，默认展开对象中的ref对象的值</span>
+    instance<span class="token punctuation">.</span>setupState <span class="token operator">=</span> <span class="token function">proxyRefs</span><span class="token punctuation">(</span>setupResult<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> setupResult <span class="token operator">!==</span> <span class="token keyword">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">warn</span><span class="token punctuation">(</span>
+      <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">setup() should return an object. Received: </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>
+        setupResult <span class="token operator">===</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token string">'null'</span> <span class="token operator">:</span> <span class="token keyword">typeof</span> setupResult
+      <span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span>
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 调用finishComponentSetup方法</span>
+  <span class="token function">finishComponentSetup</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> isSSR<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>根据模板编译渲染函数</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">finishComponentSetup</span><span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token operator">:</span> ComponentInternalInstance<span class="token punctuation">,</span>
+  isSSR<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> Component <span class="token operator">=</span> instance<span class="token punctuation">.</span>type <span class="token keyword">as</span> ComponentOptions
+
+  <span class="token comment">// template / render function normalization</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>__NODE_JS__ <span class="token operator">&amp;&amp;</span> isSSR<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token operator">...</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>instance<span class="token punctuation">.</span>render<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果不存在render函数，根据定义的template调用compile方法生成render函数</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>compile <span class="token operator">&amp;&amp;</span> Component<span class="token punctuation">.</span>template <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>Component<span class="token punctuation">.</span>render<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      Component<span class="token punctuation">.</span>render <span class="token operator">=</span> <span class="token function">compile</span><span class="token punctuation">(</span>Component<span class="token punctuation">.</span>template<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+        isCustomElement<span class="token operator">:</span> instance<span class="token punctuation">.</span>appContext<span class="token punctuation">.</span>config<span class="token punctuation">.</span>isCustomElement<span class="token punctuation">,</span>
+        delimiters<span class="token operator">:</span> Component<span class="token punctuation">.</span>delimiters
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 将生产的render函数保存到实例render属性上</span>
+    instance<span class="token punctuation">.</span>render <span class="token operator">=</span> <span class="token punctuation">(</span>Component<span class="token punctuation">.</span>render <span class="token operator">||</span> <span class="token constant">NOOP</span><span class="token punctuation">)</span> <span class="token keyword">as</span> InternalRenderFunction
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre></div><p>3、创建组件Effect，执行组件渲染函数，patch组件子树</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">const</span> setupRenderEffect<span class="token operator">:</span> <span class="token function-variable function">SetupRenderEffectFn</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token punctuation">,</span>
+  initialVNode<span class="token punctuation">,</span>
+  container<span class="token punctuation">,</span>
+  anchor<span class="token punctuation">,</span>
+  parentSuspense<span class="token punctuation">,</span>
+  isSVG<span class="token punctuation">,</span>
+  optimized</span>
+<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 创建Effect，并保存在实例的updata方法上，</span>
+  <span class="token comment">// Effect在创建的时候会先执行本身</span>
+  instance<span class="token punctuation">.</span>update <span class="token operator">=</span> <span class="token function">effect</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token function">componentEffect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>instance<span class="token punctuation">.</span>isMounted<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 创建组件逻辑</span>
+      <span class="token keyword">let</span> vnodeHook<span class="token operator">:</span> VNodeHook <span class="token operator">|</span> <span class="token keyword">null</span> <span class="token operator">|</span> <span class="token keyword">undefined</span>
+      <span class="token keyword">const</span> <span class="token punctuation">{</span> el<span class="token punctuation">,</span> props <span class="token punctuation">}</span> <span class="token operator">=</span> initialVNode
+      <span class="token keyword">const</span> <span class="token punctuation">{</span> bm<span class="token punctuation">,</span> m<span class="token punctuation">,</span> parent <span class="token punctuation">}</span> <span class="token operator">=</span> instance
+
+      <span class="token comment">// 调用beforeMount钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>bm<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">invokeArrayFns</span><span class="token punctuation">(</span>bm<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      <span class="token comment">// 调用vnode上的beforeMount钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> props <span class="token operator">&amp;&amp;</span> props<span class="token punctuation">.</span>onVnodeBeforeMount<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parent<span class="token punctuation">,</span> initialVNode<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      <span class="token comment">// 创建子树vnode</span>
+      <span class="token keyword">const</span> subTree <span class="token operator">=</span> <span class="token punctuation">(</span>instance<span class="token punctuation">.</span>subTree <span class="token operator">=</span> <span class="token function">renderComponentRoot</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token operator">...</span>
+      <span class="token comment">// 调用patch执行子树vnode的patch过程</span>
+      <span class="token function">patch</span><span class="token punctuation">(</span>
+        <span class="token keyword">null</span><span class="token punctuation">,</span>
+        subTree<span class="token punctuation">,</span>
+        container<span class="token punctuation">,</span>
+        anchor<span class="token punctuation">,</span>
+        instance<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        isSVG
+      <span class="token punctuation">)</span>
+      <span class="token comment">// 将生成的真实DOM节点保存在组件vnode的el属性上</span>
+      initialVNode<span class="token punctuation">.</span>el <span class="token operator">=</span> subTree<span class="token punctuation">.</span>el
+      <span class="token comment">// 调用mountd钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>m<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span>m<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      <span class="token comment">// 调用vnode的mountd钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> props <span class="token operator">&amp;&amp;</span> props<span class="token punctuation">.</span>onVnodeMounted<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+          <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token operator">!</span><span class="token punctuation">,</span> parent<span class="token punctuation">,</span> initialVNode<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      instance<span class="token punctuation">.</span>isMounted <span class="token operator">=</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 更新组件逻辑</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> __DEV__ <span class="token operator">?</span> <span class="token function">createDevEffectOptions</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span> <span class="token operator">:</span> prodEffectOptions<span class="token punctuation">)</span>
+  <span class="token comment">// #1801 mark it to allow recursive updates</span>
+  <span class="token punctuation">;</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span>update <span class="token keyword">as</span> SchedulerJob<span class="token punctuation">)</span><span class="token punctuation">.</span>allowRecurse <span class="token operator">=</span> <span class="token boolean">true</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h4 id="组件更新"><a href="#组件更新" class="header-anchor">#</a> 组件更新</h4> <p>之前在组件创建流程中我们已经分析过了，组件创建时会创建组件的effect，当组件中的响应式对象改变时，
+会触发组件effect的重新执行:</p> <div class="language-js extra-class"><pre class="language-js"><code>instance<span class="token punctuation">.</span>update <span class="token operator">=</span> <span class="token function">effect</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token function">componentEffect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>instance<span class="token punctuation">.</span>isMounted<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 组件创建的逻辑</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 组件更新</span>
+    <span class="token keyword">let</span> <span class="token punctuation">{</span> next<span class="token punctuation">,</span> bu<span class="token punctuation">,</span> u<span class="token punctuation">,</span> parent<span class="token punctuation">,</span> vnode <span class="token punctuation">}</span> <span class="token operator">=</span> instance
+    <span class="token keyword">let</span> originNext <span class="token operator">=</span> next
+    <span class="token keyword">let</span> vnodeHook<span class="token operator">:</span> VNodeHook <span class="token operator">|</span> <span class="token keyword">null</span> <span class="token operator">|</span> <span class="token keyword">undefined</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">pushWarningContext</span><span class="token punctuation">(</span>next <span class="token operator">||</span> instance<span class="token punctuation">.</span>vnode<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 判断next是否存在</span>
+    <span class="token comment">// 当组件更新是通过effect触发时，next = null</span>
+    <span class="token comment">// 当组件更新是通过父组件更新触发时，next为组件的更新后的组件vnode</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>next<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 当next存在时，调用updateComponentPreRender更新组件的props、slot</span>
+      <span class="token function">updateComponentPreRender</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> next<span class="token punctuation">,</span> optimized<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// next不存在时，将组件的组件vnode复制给next</span>
+      next <span class="token operator">=</span> vnode
+    <span class="token punctuation">}</span>
+    next<span class="token punctuation">.</span>el <span class="token operator">=</span> vnode<span class="token punctuation">.</span>el
+
+    <span class="token comment">// 调用before update钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>bu<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">invokeArrayFns</span><span class="token punctuation">(</span>bu<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 调用组件vnode的before update钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> next<span class="token punctuation">.</span>props <span class="token operator">&amp;&amp;</span> next<span class="token punctuation">.</span>props<span class="token punctuation">.</span>onVnodeBeforeUpdate<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parent<span class="token punctuation">,</span> next<span class="token punctuation">,</span> vnode<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// render</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">startMeasure</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">render</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 调用renderComponentRoot重新执行render函数创建更新后的vnode</span>
+    <span class="token keyword">const</span> nextTree <span class="token operator">=</span> <span class="token function">renderComponentRoot</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">endMeasure</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">render</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">const</span> prevTree <span class="token operator">=</span> instance<span class="token punctuation">.</span>subTree
+    <span class="token comment">// 更新subTree</span>
+    instance<span class="token punctuation">.</span>subTree <span class="token operator">=</span> nextTree
+
+    <span class="token comment">// reset refs</span>
+    <span class="token comment">// only needed if previous patch had refs</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>instance<span class="token punctuation">.</span>refs <span class="token operator">!==</span> <span class="token constant">EMPTY_OBJ</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      instance<span class="token punctuation">.</span>refs <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">startMeasure</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">patch</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 调用patch更新新旧子树</span>
+    <span class="token function">patch</span><span class="token punctuation">(</span>
+      prevTree<span class="token punctuation">,</span>
+      nextTree<span class="token punctuation">,</span>
+      <span class="token comment">// parent may have changed if it's in a teleport</span>
+      <span class="token function">hostParentNode</span><span class="token punctuation">(</span>prevTree<span class="token punctuation">.</span>el<span class="token operator">!</span><span class="token punctuation">)</span><span class="token operator">!</span><span class="token punctuation">,</span>
+      <span class="token comment">// anchor may have changed if it's in a fragment</span>
+      <span class="token function">getNextHostNode</span><span class="token punctuation">(</span>prevTree<span class="token punctuation">)</span><span class="token punctuation">,</span>
+      instance<span class="token punctuation">,</span>
+      parentSuspense<span class="token punctuation">,</span>
+      isSVG
+    <span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">endMeasure</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">patch</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 将更新后的的dom节点复制给组件vnode</span>
+    next<span class="token punctuation">.</span>el <span class="token operator">=</span> nextTree<span class="token punctuation">.</span>el
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>originNext <span class="token operator">===</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// self-triggered update. In case of HOC, update parent component</span>
+      <span class="token comment">// vnode el. HOC is indicated by parent instance's subTree pointing</span>
+      <span class="token comment">// to child component's vnode</span>
+      <span class="token function">updateHOCHostEl</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> nextTree<span class="token punctuation">.</span>el<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 调用updated 钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>u<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span>u<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 调用组件vnode的updated 钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> next<span class="token punctuation">.</span>props <span class="token operator">&amp;&amp;</span> next<span class="token punctuation">.</span>props<span class="token punctuation">.</span>onVnodeUpdated<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+        <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token operator">!</span><span class="token punctuation">,</span> parent<span class="token punctuation">,</span> next<span class="token operator">!</span><span class="token punctuation">,</span> vnode<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">||</span> __FEATURE_PROD_DEVTOOLS__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">devtoolsComponentUpdated</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">popWarningContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> __DEV__ <span class="token operator">?</span> <span class="token function">createDevEffectOptions</span><span class="token punctuation">(</span>instance<span class="token punctuation">)</span> <span class="token operator">:</span> prodEffectOptions<span class="token punctuation">)</span>
+<span class="token comment">// #1801 mark it to allow recursive updates</span>
+<span class="token punctuation">;</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span>update <span class="token keyword">as</span> SchedulerJob<span class="token punctuation">)</span><span class="token punctuation">.</span>allowRecurse <span class="token operator">=</span> <span class="token boolean">true</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>当组件更新时，通常有两种触发组件更新的方式：</p> <ul><li>1、组件内响应式对象改变，触发组件effect重新执行</li> <li>2、父组件更新时触发组件的更新</li></ul> <p>第一种触发方式不需要更新组件vnode，所以直接将之前的组件vnode赋值给next，而第二种方式需要调用updateComponentPreRender
+更新组件vnode。处理完组件vnode后，调用render方法重新生成组件vnode的子树，也就是subtree，通过patch方法重新对比新旧子树
+并更新DOM节点。</p> <div class="language-js extra-class"><pre class="language-js"><code>
+<span class="token keyword">const</span> <span class="token function-variable function">updateComponent</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">n1<span class="token operator">:</span> VNode<span class="token punctuation">,</span> n2<span class="token operator">:</span> VNode<span class="token punctuation">,</span> optimized<span class="token operator">:</span> boolean</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> instance <span class="token operator">=</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>component <span class="token operator">=</span> n1<span class="token punctuation">.</span>component<span class="token punctuation">)</span><span class="token operator">!</span>
+  <span class="token comment">// 通过shouldUpdateComponent判断组件是否需要更新</span>
+  <span class="token comment">// 1、当新组件vnode存在指令、或者transition方法时需要更新</span>
+  <span class="token comment">// 2、optimized为true并且patchFlag &gt; 0</span>
+  <span class="token comment">// (1)组件vnode存在动态插槽时需要更新(patchFlag = PatchFlags.DYNAMIC_SLOTS)</span>
+  <span class="token comment">// (2)存在动态key值的props(patchFlag = PatchFlags.FULL_PROPS)时，对比props是否改变，如果改变则更新</span>
+  <span class="token comment">// (3)存在除了style、class的动态props(patchFlag = PatchFlags.PROPS)时，对比props是否改变，如果改变则更新</span>
+  <span class="token comment">// 3、如果是通过手写渲染函数生成的组件vnode,</span>
+  <span class="token comment">// (1)判断传入渲染函数的children是否包含$stable属性，如果不存在$stable属性则更新</span>
+  <span class="token comment">// (2)对比props是否改变，如果改变则更新</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">shouldUpdateComponent</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> optimized<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      __FEATURE_SUSPENSE__ <span class="token operator">&amp;&amp;</span>
+      instance<span class="token punctuation">.</span>asyncDep <span class="token operator">&amp;&amp;</span>
+      <span class="token operator">!</span>instance<span class="token punctuation">.</span>asyncResolved
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 动态组件更新</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 将新组件vnode赋值给实例的next属性</span>
+      instance<span class="token punctuation">.</span>next <span class="token operator">=</span> n2
+      <span class="token comment">// 如果当前组件在更新队列中，则删除当前组件在队列中的更新任务，避免重复更新</span>
+      <span class="token function">invalidateJob</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span>update<span class="token punctuation">)</span>
+      <span class="token comment">// 调用update方法执行组件的effect</span>
+      instance<span class="token punctuation">.</span><span class="token function">update</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果不需要更新，则直接更新复制旧vnode的component、el属性到新vnode</span>
+    <span class="token comment">// 并更新实例上保存的组件vnode</span>
+    n2<span class="token punctuation">.</span>component <span class="token operator">=</span> n1<span class="token punctuation">.</span>component
+    n2<span class="token punctuation">.</span>el <span class="token operator">=</span> n1<span class="token punctuation">.</span>el
+    instance<span class="token punctuation">.</span>vnode <span class="token operator">=</span> n2
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre></div><p>注意此时实例上的next属性保存了新vnode节点，再次执行子组件的effect时，就会执行updateComponentPreRender：</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">const</span> <span class="token function-variable function">updateComponentPreRender</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+  <span class="token parameter">instance<span class="token operator">:</span> ComponentInternalInstance<span class="token punctuation">,</span>
+  nextVNode<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+  optimized<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> instance<span class="token punctuation">.</span>type<span class="token punctuation">.</span>__hmrId<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    optimized <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">//</span>
+  nextVNode<span class="token punctuation">.</span>component <span class="token operator">=</span> instance
+  <span class="token keyword">const</span> prevProps <span class="token operator">=</span> instance<span class="token punctuation">.</span>vnode<span class="token punctuation">.</span>props
+  instance<span class="token punctuation">.</span>vnode <span class="token operator">=</span> nextVNode
+  instance<span class="token punctuation">.</span>next <span class="token operator">=</span> <span class="token keyword">null</span>
+  <span class="token comment">// 更新props、slot</span>
+  <span class="token function">updateProps</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> nextVNode<span class="token punctuation">.</span>props<span class="token punctuation">,</span> prevProps<span class="token punctuation">,</span> optimized<span class="token punctuation">)</span>
+  <span class="token function">updateSlots</span><span class="token punctuation">(</span>instance<span class="token punctuation">,</span> nextVNode<span class="token punctuation">.</span>children<span class="token punctuation">)</span>
+
+  <span class="token comment">// 如果组件内监听了props，那么更新了props就会触发watchers</span>
+  <span class="token comment">// 调用flushPreFlushCbs在重新渲染之前执行这些watcher</span>
+  <span class="token comment">// 这里的逻辑会在介绍scheduler的时候分析</span>
+  <span class="token function">flushPreFlushCbs</span><span class="token punctuation">(</span><span class="token keyword">undefined</span><span class="token punctuation">,</span> instance<span class="token punctuation">.</span>update<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h3 id="处理element节点-processelement"><a href="#处理element节点-processelement" class="header-anchor">#</a> 处理Element节点 processElement</h3> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// 处理Element节点同样分为创建和更新过程</span>
+<span class="token keyword">const</span> <span class="token function-variable function">processElement</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+  <span class="token parameter">n1<span class="token operator">:</span> VNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  n2<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+  container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+  anchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+  isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+  optimized<span class="token operator">:</span> boolean</span>
+<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  isSVG <span class="token operator">=</span> isSVG <span class="token operator">||</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>type <span class="token keyword">as</span> string<span class="token punctuation">)</span> <span class="token operator">===</span> <span class="token string">'svg'</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>n1 <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">mountElement</span><span class="token punctuation">(</span>
+      n2<span class="token punctuation">,</span>
+      container<span class="token punctuation">,</span>
+      anchor<span class="token punctuation">,</span>
+      parentComponent<span class="token punctuation">,</span>
+      parentSuspense<span class="token punctuation">,</span>
+      isSVG<span class="token punctuation">,</span>
+      optimized
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">patchElement</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> isSVG<span class="token punctuation">,</span> optimized<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h4 id="创建element节点"><a href="#创建element节点" class="header-anchor">#</a> 创建Element节点</h4> <div class="language-js extra-class"><pre class="language-js"><code>  <span class="token keyword">const</span> <span class="token function-variable function">mountElement</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">vnode<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+    container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+    anchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+    optimized<span class="token operator">:</span> boolean</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token keyword">let</span> el<span class="token operator">:</span> RendererElement
+    <span class="token keyword">let</span> vnodeHook<span class="token operator">:</span> VNodeHook <span class="token operator">|</span> <span class="token keyword">undefined</span> <span class="token operator">|</span> <span class="token keyword">null</span>
+    <span class="token keyword">const</span> <span class="token punctuation">{</span>
+      type<span class="token punctuation">,</span>
+      props<span class="token punctuation">,</span>
+      shapeFlag<span class="token punctuation">,</span>
+      transition<span class="token punctuation">,</span>
+      scopeId<span class="token punctuation">,</span>
+      patchFlag<span class="token punctuation">,</span>
+      dirs
+    <span class="token punctuation">}</span> <span class="token operator">=</span> vnode
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      <span class="token operator">!</span>__DEV__ <span class="token operator">&amp;&amp;</span>
+      vnode<span class="token punctuation">.</span>el <span class="token operator">&amp;&amp;</span>
+      hostCloneNode <span class="token operator">!==</span> <span class="token keyword">undefined</span> <span class="token operator">&amp;&amp;</span>
+      patchFlag <span class="token operator">===</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">HOISTED</span>
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// If a vnode has non-null el, it means it's being reused.</span>
+      <span class="token comment">// Only static vnodes can be reused, so its mounted DOM nodes should be</span>
+      <span class="token comment">// exactly the same, and we can simply do a clone here.</span>
+      <span class="token comment">// only do this in production since cloned trees cannot be HMR updated.</span>
+      <span class="token comment">// 在生产环境中，如果此时vnode的DOM已经生成保存在el属性上</span>
+      <span class="token comment">// 并且vnode是一个PatchFlags.HOISTED静态节点，说明它已经被patch过并且不会改变</span>
+      <span class="token comment">// 直接复制vnode的DOM节点</span>
+      el <span class="token operator">=</span> vnode<span class="token punctuation">.</span>el <span class="token operator">=</span> <span class="token function">hostCloneNode</span><span class="token punctuation">(</span>vnode<span class="token punctuation">.</span>el<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 否则 根据vnode的type创建DOM节点</span>
+      el <span class="token operator">=</span> vnode<span class="token punctuation">.</span>el <span class="token operator">=</span> <span class="token function">hostCreateElement</span><span class="token punctuation">(</span>
+        vnode<span class="token punctuation">.</span>type <span class="token keyword">as</span> string<span class="token punctuation">,</span>
+        isSVG<span class="token punctuation">,</span>
+        props <span class="token operator">&amp;&amp;</span> props<span class="token punctuation">.</span>is
+      <span class="token punctuation">)</span>
+
+      <span class="token comment">// mount children first, since some props may rely on child content</span>
+      <span class="token comment">// being already rendered, e.g. `&lt;select value&gt;`</span>
+      <span class="token comment">// 先创建子节点，props或者props上的某些钩子可能会依赖子节点</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">TEXT_CHILDREN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 如果子节点是文本直接设置节点内容</span>
+        <span class="token function">hostSetElementText</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> vnode<span class="token punctuation">.</span>children <span class="token keyword">as</span> string<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>shapeFlag <span class="token operator">&amp;</span> ShapeFlags<span class="token punctuation">.</span><span class="token constant">ARRAY_CHILDREN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 如果子节点是array，遍历子节点</span>
+        <span class="token comment">// 递归调用patch创建子节点</span>
+        <span class="token function">mountChildren</span><span class="token punctuation">(</span>
+          vnode<span class="token punctuation">.</span>children <span class="token keyword">as</span> VNodeArrayChildren<span class="token punctuation">,</span>
+          el<span class="token punctuation">,</span>
+          <span class="token keyword">null</span><span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG <span class="token operator">&amp;&amp;</span> type <span class="token operator">!==</span> <span class="token string">'foreignObject'</span><span class="token punctuation">,</span>
+          optimized <span class="token operator">||</span> <span class="token operator">!</span><span class="token operator">!</span>vnode<span class="token punctuation">.</span>dynamicChildren
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token comment">// props</span>
+      <span class="token comment">// 处理vnode的props，并调用BeforeMount钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>props<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> key <span class="token keyword">in</span> props<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">isReservedProp</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token function">hostPatchProp</span><span class="token punctuation">(</span>
+              el<span class="token punctuation">,</span>
+              key<span class="token punctuation">,</span>
+              <span class="token keyword">null</span><span class="token punctuation">,</span>
+              props<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">,</span>
+              isSVG<span class="token punctuation">,</span>
+              vnode<span class="token punctuation">.</span>children <span class="token keyword">as</span> VNode<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+              parentComponent<span class="token punctuation">,</span>
+              parentSuspense<span class="token punctuation">,</span>
+              unmountChildren
+            <span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> props<span class="token punctuation">.</span>onVnodeBeforeMount<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> vnode<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+      <span class="token comment">// 如果存在指令，调用指令的beforeMount钩子</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>dirs<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">invokeDirectiveHook</span><span class="token punctuation">(</span>vnode<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> <span class="token string">'beforeMount'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token comment">// scopeId</span>
+      <span class="token comment">// 如果是使用单文件开发模式，存在scopeId，则设置scopeId</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>scopeId<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">hostSetScopeId</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> scopeId<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">const</span> treeOwnerId <span class="token operator">=</span> parentComponent <span class="token operator">&amp;&amp;</span> parentComponent<span class="token punctuation">.</span>type<span class="token punctuation">.</span>__scopeId
+      <span class="token comment">// vnode's own scopeId and the current patched component's scopeId is</span>
+      <span class="token comment">// different - this is a slot content node.</span>
+      <span class="token comment">// 如果scopeId和实例上的scopeId不同</span>
+      <span class="token comment">// 那么证明节点为插槽内的节点，那么将节点的scopeId设置为treeOwnerId + '-s'</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>treeOwnerId <span class="token operator">&amp;&amp;</span> treeOwnerId <span class="token operator">!==</span> scopeId<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">hostSetScopeId</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> treeOwnerId <span class="token operator">+</span> <span class="token string">'-s'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved</span>
+    <span class="token comment">// #1689 For inside suspense + suspense resolved case, just call it</span>
+    <span class="token comment">// 关于transition后面会详细介绍</span>
+    <span class="token comment">// 如果满足根据以下这些条件，调用transition的beforeEnter钩子</span>
+    <span class="token keyword">const</span> needCallTransitionHooks <span class="token operator">=</span>
+      <span class="token punctuation">(</span><span class="token operator">!</span>parentSuspense <span class="token operator">||</span> <span class="token punctuation">(</span>parentSuspense <span class="token operator">&amp;&amp;</span> parentSuspense<span class="token operator">!</span><span class="token punctuation">.</span>isResolved<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+      transition <span class="token operator">&amp;&amp;</span>
+      <span class="token operator">!</span>transition<span class="token punctuation">.</span>persisted
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>needCallTransitionHooks<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      transition<span class="token operator">!</span><span class="token punctuation">.</span><span class="token function">beforeEnter</span><span class="token punctuation">(</span>el<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 将节点插入真实的DOM中</span>
+    <span class="token function">hostInsert</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">)</span>
+    <span class="token comment">// 调用vnode的mounted钩子</span>
+    <span class="token comment">// transition的enter钩子</span>
+    <span class="token comment">// 指令的mounted钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      <span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> props <span class="token operator">&amp;&amp;</span> props<span class="token punctuation">.</span>onVnodeMounted<span class="token punctuation">)</span> <span class="token operator">||</span>
+      needCallTransitionHooks <span class="token operator">||</span>
+      dirs
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+        vnodeHook <span class="token operator">&amp;&amp;</span> <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> vnode<span class="token punctuation">)</span>
+        needCallTransitionHooks <span class="token operator">&amp;&amp;</span> transition<span class="token operator">!</span><span class="token punctuation">.</span><span class="token function">enter</span><span class="token punctuation">(</span>el<span class="token punctuation">)</span>
+        dirs <span class="token operator">&amp;&amp;</span> <span class="token function">invokeDirectiveHook</span><span class="token punctuation">(</span>vnode<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> <span class="token string">'mounted'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+</code></pre></div><h4 id="更新element节点"><a href="#更新element节点" class="header-anchor">#</a> 更新Element节点</h4> <div class="language-js extra-class"><pre class="language-js"><code>  <span class="token keyword">const</span> <span class="token function-variable function">patchElement</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">n1<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+    n2<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+    parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+    optimized<span class="token operator">:</span> boolean</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> el <span class="token operator">=</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>el <span class="token operator">=</span> n1<span class="token punctuation">.</span>el<span class="token operator">!</span><span class="token punctuation">)</span>
+    <span class="token keyword">let</span> <span class="token punctuation">{</span> patchFlag<span class="token punctuation">,</span> dynamicChildren<span class="token punctuation">,</span> dirs <span class="token punctuation">}</span> <span class="token operator">=</span> n2
+    <span class="token comment">// #1426 take the old vnode's patch flag into account since user may clone a</span>
+    <span class="token comment">// compiler-generated vnode, which de-opts to FULL_PROPS</span>
+    <span class="token comment">// 同步新旧节点的patchFlag</span>
+    patchFlag <span class="token operator">|=</span> n1<span class="token punctuation">.</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">FULL_PROPS</span>
+    <span class="token keyword">const</span> oldProps <span class="token operator">=</span> n1<span class="token punctuation">.</span>props <span class="token operator">||</span> <span class="token constant">EMPTY_OBJ</span>
+    <span class="token keyword">const</span> newProps <span class="token operator">=</span> n2<span class="token punctuation">.</span>props <span class="token operator">||</span> <span class="token constant">EMPTY_OBJ</span>
+    <span class="token keyword">let</span> vnodeHook<span class="token operator">:</span> VNodeHook <span class="token operator">|</span> <span class="token keyword">undefined</span> <span class="token operator">|</span> <span class="token keyword">null</span>
+    <span class="token comment">// 调用vnode的before update钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> newProps<span class="token punctuation">.</span>onVnodeBeforeUpdate<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> n1<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果节点存在指令调用指令的before update钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>dirs<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">invokeDirectiveHook</span><span class="token punctuation">(</span>n2<span class="token punctuation">,</span> n1<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> <span class="token string">'beforeUpdate'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> isHmrUpdating<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// HMR updated, force full diff</span>
+      patchFlag <span class="token operator">=</span> <span class="token number">0</span>
+      optimized <span class="token operator">=</span> <span class="token boolean">false</span>
+      dynamicChildren <span class="token operator">=</span> <span class="token keyword">null</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 处理节点的props</span>
+    <span class="token comment">// patchFlag &gt; 0 进入优化模式，根据props的动态类型对比更新props</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// the presence of a patchFlag means this element's render code was</span>
+      <span class="token comment">// generated by the compiler and can take the fast path.</span>
+      <span class="token comment">// in this path old node and new node are guaranteed to have the same shape</span>
+      <span class="token comment">// (i.e. at the exact same position in the source template)</span>
+      <span class="token comment">// 节点存在动态key时，对比所有的props</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">FULL_PROPS</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// element props contain dynamic keys, full diff needed</span>
+        <span class="token function">patchProps</span><span class="token punctuation">(</span>
+          el<span class="token punctuation">,</span>
+          n2<span class="token punctuation">,</span>
+          oldProps<span class="token punctuation">,</span>
+          newProps<span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// class</span>
+        <span class="token comment">// this flag is matched when the element has dynamic class bindings.</span>
+        <span class="token comment">// 存在动态class，处理动态class props</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">CLASS</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>oldProps<span class="token punctuation">.</span>class <span class="token operator">!==</span> newProps<span class="token punctuation">.</span>class<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token function">hostPatchProp</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> <span class="token string">'class'</span><span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">,</span> newProps<span class="token punctuation">.</span>class<span class="token punctuation">,</span> isSVG<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// style</span>
+        <span class="token comment">// this flag is matched when the element has dynamic style bindings</span>
+        <span class="token comment">// 存在动态style，处理动态style props</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">STYLE</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">hostPatchProp</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> <span class="token string">'style'</span><span class="token punctuation">,</span> oldProps<span class="token punctuation">.</span>style<span class="token punctuation">,</span> newProps<span class="token punctuation">.</span>style<span class="token punctuation">,</span> isSVG<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// props</span>
+        <span class="token comment">// This flag is matched when the element has dynamic prop/attr bindings</span>
+        <span class="token comment">// other than class and style. The keys of dynamic prop/attrs are saved for</span>
+        <span class="token comment">// faster iteration.</span>
+        <span class="token comment">// Note dynamic keys like :[foo]=&quot;bar&quot; will cause this optimization to</span>
+        <span class="token comment">// bail out and go through a full diff because we need to unset the old key</span>
+        <span class="token comment">// 存在除了动态class、动态style的props时，会将props的key值保存在dynamicProps属性上</span>
+        <span class="token comment">// 只对比dynamicProps上的props key即可</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">PROPS</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// if the flag is present then dynamicProps must be non-null</span>
+          <span class="token keyword">const</span> propsToUpdate <span class="token operator">=</span> n2<span class="token punctuation">.</span>dynamicProps<span class="token operator">!</span>
+          <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> propsToUpdate<span class="token punctuation">.</span>length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">const</span> key <span class="token operator">=</span> propsToUpdate<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+            <span class="token keyword">const</span> prev <span class="token operator">=</span> oldProps<span class="token punctuation">[</span>key<span class="token punctuation">]</span>
+            <span class="token keyword">const</span> next <span class="token operator">=</span> newProps<span class="token punctuation">[</span>key<span class="token punctuation">]</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>
+              next <span class="token operator">!==</span> prev <span class="token operator">||</span>
+              <span class="token punctuation">(</span>hostForcePatchProp <span class="token operator">&amp;&amp;</span> <span class="token function">hostForcePatchProp</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+              <span class="token function">hostPatchProp</span><span class="token punctuation">(</span>
+                el<span class="token punctuation">,</span>
+                key<span class="token punctuation">,</span>
+                prev<span class="token punctuation">,</span>
+                next<span class="token punctuation">,</span>
+                isSVG<span class="token punctuation">,</span>
+                n1<span class="token punctuation">.</span>children <span class="token keyword">as</span> VNode<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                parentComponent<span class="token punctuation">,</span>
+                parentSuspense<span class="token punctuation">,</span>
+                unmountChildren
+              <span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token comment">// text</span>
+      <span class="token comment">// This flag is matched when the element has only dynamic text children.</span>
+      <span class="token comment">// 存在动态文本子节点时，直接更新节点的内容</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>n1<span class="token punctuation">.</span>children <span class="token operator">!==</span> n2<span class="token punctuation">.</span>children<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">hostSetElementText</span><span class="token punctuation">(</span>el<span class="token punctuation">,</span> n2<span class="token punctuation">.</span>children <span class="token keyword">as</span> string<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>optimized <span class="token operator">&amp;&amp;</span> dynamicChildren <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// unoptimized, full diff</span>
+      <span class="token comment">// 当patchFlag &lt; 0并且dynamicChildren === null时不进入优化模式</span>
+      <span class="token comment">// 此时要patch所有props</span>
+      <span class="token function">patchProps</span><span class="token punctuation">(</span>
+        el<span class="token punctuation">,</span>
+        n2<span class="token punctuation">,</span>
+        oldProps<span class="token punctuation">,</span>
+        newProps<span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        isSVG
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">const</span> areChildrenSVG <span class="token operator">=</span> isSVG <span class="token operator">&amp;&amp;</span> n2<span class="token punctuation">.</span>type <span class="token operator">!==</span> <span class="token string">'foreignObject'</span>
+    <span class="token comment">// 递归patch子节点</span>
+    <span class="token comment">// 存在dynamicChildren时，只patch dynamicChildren保存的动态节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>dynamicChildren<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">patchBlockChildren</span><span class="token punctuation">(</span>
+        n1<span class="token punctuation">.</span>dynamicChildren<span class="token operator">!</span><span class="token punctuation">,</span>
+        dynamicChildren<span class="token punctuation">,</span>
+        el<span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        areChildrenSVG
+      <span class="token punctuation">)</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> parentComponent <span class="token operator">&amp;&amp;</span> parentComponent<span class="token punctuation">.</span>type<span class="token punctuation">.</span>__hmrId<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">traverseStaticChildren</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>optimized<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// full diff</span>
+      <span class="token comment">// 否则调用patchChildren，patch所有子节点</span>
+      <span class="token function">patchChildren</span><span class="token punctuation">(</span>
+        n1<span class="token punctuation">,</span>
+        n2<span class="token punctuation">,</span>
+        el<span class="token punctuation">,</span>
+        <span class="token keyword">null</span><span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        areChildrenSVG
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 更新完子节点后调用vnode和指令的updated钩子</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>vnodeHook <span class="token operator">=</span> newProps<span class="token punctuation">.</span>onVnodeUpdated<span class="token punctuation">)</span> <span class="token operator">||</span> dirs<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">queuePostRenderEffect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+        vnodeHook <span class="token operator">&amp;&amp;</span> <span class="token function">invokeVNodeHook</span><span class="token punctuation">(</span>vnodeHook<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> n1<span class="token punctuation">)</span>
+        dirs <span class="token operator">&amp;&amp;</span> <span class="token function">invokeDirectiveHook</span><span class="token punctuation">(</span>n2<span class="token punctuation">,</span> n1<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> <span class="token string">'updated'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> parentSuspense<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+</code></pre></div><h3 id="处理fragment节点"><a href="#处理fragment节点" class="header-anchor">#</a> 处理Fragment节点</h3> <ul><li>1、在Vue3中，模板已经支持了多个根节点，当模板存在多个根节点时，Vue会自动生成一个Fragment节点，将所有的根节点作为Fragment的子节点</li> <li>2、使用v-for指令渲染列表时，生成的vnode会作为一个Fragment节点的子节点</li></ul> <div class="language-js extra-class"><pre class="language-js"><code>  <span class="token keyword">const</span> <span class="token function-variable function">processFragment</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">n1<span class="token operator">:</span> VNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    n2<span class="token operator">:</span> VNode<span class="token punctuation">,</span>
+    container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+    anchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+    optimized<span class="token operator">:</span> boolean</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Fragment节点是没有内容的，也不会出现在真实的DOM节点</span>
+    <span class="token comment">// 所以需要创建2个锚点来确定Fragment节点的子节点插入的位置</span>
+    <span class="token keyword">const</span> fragmentStartAnchor <span class="token operator">=</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>el <span class="token operator">=</span> n1 <span class="token operator">?</span> n1<span class="token punctuation">.</span>el <span class="token operator">:</span> <span class="token function">hostCreateText</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">!</span>
+    <span class="token keyword">const</span> fragmentEndAnchor <span class="token operator">=</span> <span class="token punctuation">(</span>n2<span class="token punctuation">.</span>anchor <span class="token operator">=</span> n1 <span class="token operator">?</span> n1<span class="token punctuation">.</span>anchor <span class="token operator">:</span> <span class="token function">hostCreateText</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">!</span>
+
+    <span class="token keyword">let</span> <span class="token punctuation">{</span> patchFlag<span class="token punctuation">,</span> dynamicChildren <span class="token punctuation">}</span> <span class="token operator">=</span> n2
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>patchFlag <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      optimized <span class="token operator">=</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> isHmrUpdating<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// HMR updated, force full diff</span>
+      patchFlag <span class="token operator">=</span> <span class="token number">0</span>
+      optimized <span class="token operator">=</span> <span class="token boolean">false</span>
+      dynamicChildren <span class="token operator">=</span> <span class="token keyword">null</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>n1 <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 创建Fragment</span>
+      <span class="token comment">// 将创建的空节点插入父节点中</span>
+      <span class="token function">hostInsert</span><span class="token punctuation">(</span>fragmentStartAnchor<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">)</span>
+      <span class="token function">hostInsert</span><span class="token punctuation">(</span>fragmentEndAnchor<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">)</span>
+      <span class="token comment">// a fragment can only have array children</span>
+      <span class="token comment">// since they are either generated by the compiler, or implicitly created</span>
+      <span class="token comment">// from arrays.</span>
+      <span class="token comment">// 调用mountChildren递归创建子节点</span>
+      <span class="token function">mountChildren</span><span class="token punctuation">(</span>
+        n2<span class="token punctuation">.</span>children <span class="token keyword">as</span> VNodeArrayChildren<span class="token punctuation">,</span>
+        container<span class="token punctuation">,</span>
+        fragmentEndAnchor<span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        isSVG<span class="token punctuation">,</span>
+        optimized
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 更新Fragment节点</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>
+        patchFlag <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span>
+        patchFlag <span class="token operator">&amp;</span> PatchFlags<span class="token punctuation">.</span><span class="token constant">STABLE_FRAGMENT</span> <span class="token operator">&amp;&amp;</span>
+        dynamicChildren
+      <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// a stable fragment (template root or &lt;template v-for&gt;) doesn't need to</span>
+        <span class="token comment">// patch children order, but it may contain dynamicChildren.</span>
+        <span class="token comment">// 如果是STABLE_FRAGMENT，那么它的子节点的顺序不会改变</span>
+        <span class="token comment">// 那么只需要遍历dynamicChildren动态节点，递归调用patch更新动态节点</span>
+        <span class="token function">patchBlockChildren</span><span class="token punctuation">(</span>
+          n1<span class="token punctuation">.</span>dynamicChildren<span class="token operator">!</span><span class="token punctuation">,</span>
+          dynamicChildren<span class="token punctuation">,</span>
+          container<span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG
+        <span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> parentComponent <span class="token operator">&amp;&amp;</span> parentComponent<span class="token punctuation">.</span>type<span class="token punctuation">.</span>__hmrId<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">traverseStaticChildren</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// keyed / unkeyed, or manual fragments.</span>
+        <span class="token comment">// for keyed &amp; unkeyed, since they are compiler generated from v-for,</span>
+        <span class="token comment">// each child is guaranteed to be a block so the fragment will never</span>
+        <span class="token comment">// have dynamicChildren.</span>
+        <span class="token comment">// 如果是v-for生成的keyed或者unkeyed的fragment节点，那么它的子节点的顺序是可能</span>
+        <span class="token comment">// 改变顺序的，所以应该对比所有子节点</span>
+        <span class="token function">patchChildren</span><span class="token punctuation">(</span>
+          n1<span class="token punctuation">,</span>
+          n2<span class="token punctuation">,</span>
+          container<span class="token punctuation">,</span>
+          fragmentEndAnchor<span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG<span class="token punctuation">,</span>
+          optimized
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+</code></pre></div><p>更新keyed、 unkeyed子节点</p> <div class="language-js extra-class"><pre class="language-js"><code>  <span class="token comment">// 更新不带key值的子节点</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">patchUnkeyedChildren</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">c1<span class="token operator">:</span> VNode<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    c2<span class="token operator">:</span> VNodeArrayChildren<span class="token punctuation">,</span>
+    container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+    anchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+    optimized<span class="token operator">:</span> boolean</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    c1 <span class="token operator">=</span> c1 <span class="token operator">||</span> <span class="token constant">EMPTY_ARR</span>
+    c2 <span class="token operator">=</span> c2 <span class="token operator">||</span> <span class="token constant">EMPTY_ARR</span>
+    <span class="token keyword">const</span> oldLength <span class="token operator">=</span> c1<span class="token punctuation">.</span>length
+    <span class="token keyword">const</span> newLength <span class="token operator">=</span> c2<span class="token punctuation">.</span>length
+    <span class="token comment">// 获取新旧子节点长度的最小值</span>
+    <span class="token keyword">const</span> commonLength <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">min</span><span class="token punctuation">(</span>oldLength<span class="token punctuation">,</span> newLength<span class="token punctuation">)</span>
+    <span class="token keyword">let</span> i
+    <span class="token comment">// 遍历到commonLength，递归调用patch</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> commonLength<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> nextChild <span class="token operator">=</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> optimized
+        <span class="token operator">?</span> <span class="token function">cloneIfMounted</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+        <span class="token operator">:</span> <span class="token function">normalizeVNode</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token function">patch</span><span class="token punctuation">(</span>
+        c1<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span>
+        nextChild<span class="token punctuation">,</span>
+        container<span class="token punctuation">,</span>
+        <span class="token keyword">null</span><span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        isSVG<span class="token punctuation">,</span>
+        optimized
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 当旧子节点的长度大于新的，则销毁旧节点，否则创建新节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>oldLength <span class="token operator">&gt;</span> newLength<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// remove old</span>
+      <span class="token function">unmountChildren</span><span class="token punctuation">(</span>c1<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">,</span> commonLength<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// mount new</span>
+      <span class="token function">mountChildren</span><span class="token punctuation">(</span>
+        c2<span class="token punctuation">,</span>
+        container<span class="token punctuation">,</span>
+        anchor<span class="token punctuation">,</span>
+        parentComponent<span class="token punctuation">,</span>
+        parentSuspense<span class="token punctuation">,</span>
+        isSVG<span class="token punctuation">,</span>
+        optimized<span class="token punctuation">,</span>
+        commonLength
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+<span class="token comment">// 更新带key值的子节点</span>
+
+  <span class="token keyword">const</span> <span class="token function-variable function">patchKeyedChildren</span> <span class="token operator">=</span> <span class="token punctuation">(</span>
+    <span class="token parameter">c1<span class="token operator">:</span> VNode<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    c2<span class="token operator">:</span> VNodeArrayChildren<span class="token punctuation">,</span>
+    container<span class="token operator">:</span> RendererElement<span class="token punctuation">,</span>
+    parentAnchor<span class="token operator">:</span> RendererNode <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentComponent<span class="token operator">:</span> ComponentInternalInstance <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    parentSuspense<span class="token operator">:</span> SuspenseBoundary <span class="token operator">|</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    isSVG<span class="token operator">:</span> boolean<span class="token punctuation">,</span>
+    optimized<span class="token operator">:</span> boolean</span>
+  <span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+    <span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span>
+    <span class="token keyword">const</span> l2 <span class="token operator">=</span> c2<span class="token punctuation">.</span>length
+    <span class="token keyword">let</span> e1 <span class="token operator">=</span> c1<span class="token punctuation">.</span>length <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">// prev ending index</span>
+    <span class="token keyword">let</span> e2 <span class="token operator">=</span> l2 <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">// next ending index</span>
+
+    <span class="token comment">// 1. sync from start</span>
+    <span class="token comment">// (a b) c</span>
+    <span class="token comment">// (a b) d e</span>
+    <span class="token comment">// 从头开始同步节点，直到第一个不相同的节点</span>
+    <span class="token comment">// 记录此时的同步到的节点的位置i</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>i <span class="token operator">&lt;=</span> e1 <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;=</span> e2<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> n1 <span class="token operator">=</span> c1<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+      <span class="token keyword">const</span> n2 <span class="token operator">=</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> optimized
+        <span class="token operator">?</span> <span class="token function">cloneIfMounted</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+        <span class="token operator">:</span> <span class="token function">normalizeVNode</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isSameVNodeType</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">patch</span><span class="token punctuation">(</span>
+          n1<span class="token punctuation">,</span>
+          n2<span class="token punctuation">,</span>
+          container<span class="token punctuation">,</span>
+          <span class="token keyword">null</span><span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG<span class="token punctuation">,</span>
+          optimized
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token keyword">break</span>
+      <span class="token punctuation">}</span>
+      i<span class="token operator">++</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 2. sync from end</span>
+    <span class="token comment">// a (b c)</span>
+    <span class="token comment">// d e (b c)</span>
+    <span class="token comment">// 从尾部开始同步节点，直到第一个不相同的节点</span>
+    <span class="token comment">// 记录此时的同步到的节点的位置e1、e2</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>i <span class="token operator">&lt;=</span> e1 <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;=</span> e2<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> n1 <span class="token operator">=</span> c1<span class="token punctuation">[</span>e1<span class="token punctuation">]</span>
+      <span class="token keyword">const</span> n2 <span class="token operator">=</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>e2<span class="token punctuation">]</span> <span class="token operator">=</span> optimized
+        <span class="token operator">?</span> <span class="token function">cloneIfMounted</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>e2<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+        <span class="token operator">:</span> <span class="token function">normalizeVNode</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>e2<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isSameVNodeType</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">patch</span><span class="token punctuation">(</span>
+          n1<span class="token punctuation">,</span>
+          n2<span class="token punctuation">,</span>
+          container<span class="token punctuation">,</span>
+          <span class="token keyword">null</span><span class="token punctuation">,</span>
+          parentComponent<span class="token punctuation">,</span>
+          parentSuspense<span class="token punctuation">,</span>
+          isSVG<span class="token punctuation">,</span>
+          optimized
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token keyword">break</span>
+      <span class="token punctuation">}</span>
+      e1<span class="token operator">--</span>
+      e2<span class="token operator">--</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 3. common sequence + mount</span>
+    <span class="token comment">// (a b)</span>
+    <span class="token comment">// (a b) c</span>
+    <span class="token comment">// i = 2, e1 = 1, e2 = 2</span>
+    <span class="token comment">// (a b)</span>
+    <span class="token comment">// c (a b)</span>
+    <span class="token comment">// i = 0, e1 = -1, e2 = 0</span>
+    <span class="token comment">// 同步完头部、尾部的节点后</span>
+    <span class="token comment">// 如果旧子节点数组没有剩余节点也就是i &gt; e1</span>
+    <span class="token comment">// 并且新节点有剩余节点也就是i &lt;= e2</span>
+    <span class="token comment">// 则证明有新添加的节点，调用patch传入n1 === null创建节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">&gt;</span> e1<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">&lt;=</span> e2<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> nextPos <span class="token operator">=</span> e2 <span class="token operator">+</span> <span class="token number">1</span>
+        <span class="token keyword">const</span> anchor <span class="token operator">=</span> nextPos <span class="token operator">&lt;</span> l2 <span class="token operator">?</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>nextPos<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span><span class="token punctuation">.</span>el <span class="token operator">:</span> parentAnchor
+        <span class="token keyword">while</span> <span class="token punctuation">(</span>i <span class="token operator">&lt;=</span> e2<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">patch</span><span class="token punctuation">(</span>
+            <span class="token keyword">null</span><span class="token punctuation">,</span>
+            <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> optimized
+              <span class="token operator">?</span> <span class="token function">cloneIfMounted</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+              <span class="token operator">:</span> <span class="token function">normalizeVNode</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG
+          <span class="token punctuation">)</span>
+          i<span class="token operator">++</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 4. common sequence + unmount</span>
+    <span class="token comment">// (a b) c</span>
+    <span class="token comment">// (a b)</span>
+    <span class="token comment">// i = 2, e1 = 2, e2 = 1</span>
+    <span class="token comment">// a (b c)</span>
+    <span class="token comment">// (b c)</span>
+    <span class="token comment">// i = 0, e1 = 0, e2 = -1</span>
+    <span class="token comment">// 同步完头部、尾部的节点后</span>
+    <span class="token comment">// 如果新子节点数组没有剩余节点也就是i &gt; e2</span>
+    <span class="token comment">// 并且就节点有剩余节点也就是i &lt;= e1</span>
+    <span class="token comment">// 则证明有删除的节点，调用unmount销毁旧节点</span>
+    <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">&gt;</span> e2<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">while</span> <span class="token punctuation">(</span>i <span class="token operator">&lt;=</span> e1<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">unmount</span><span class="token punctuation">(</span>c1<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+        i<span class="token operator">++</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 5. unknown sequence</span>
+    <span class="token comment">// [i ... e1 + 1]: a b [c d e] f g</span>
+    <span class="token comment">// [i ... e2 + 1]: a b [e d c h] f g</span>
+    <span class="token comment">// i = 2, e1 = 4, e2 = 5</span>
+    <span class="token comment">// 同步头尾节点后新旧节点都剩余节点</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> s1 <span class="token operator">=</span> i <span class="token comment">// prev starting index</span>
+      <span class="token keyword">const</span> s2 <span class="token operator">=</span> i <span class="token comment">// next starting index</span>
+
+      <span class="token comment">// 5.1 build key:index map for newChildren</span>
+      <span class="token comment">// 根据新节点的顺序创建key为新节点的key，value为位置i的map</span>
+      <span class="token keyword">const</span> keyToNewIndexMap<span class="token operator">:</span> Map<span class="token operator">&lt;</span>string <span class="token operator">|</span> number<span class="token punctuation">,</span> number<span class="token operator">&gt;</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Map</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> s2<span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> e2<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> nextChild <span class="token operator">=</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> optimized
+          <span class="token operator">?</span> <span class="token function">cloneIfMounted</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+          <span class="token operator">:</span> <span class="token function">normalizeVNode</span><span class="token punctuation">(</span>c2<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>nextChild<span class="token punctuation">.</span>key <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>__DEV__ <span class="token operator">&amp;&amp;</span> keyToNewIndexMap<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">(</span>nextChild<span class="token punctuation">.</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token function">warn</span><span class="token punctuation">(</span>
+              <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Duplicate keys found during update:</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+              <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>nextChild<span class="token punctuation">.</span>key<span class="token punctuation">)</span><span class="token punctuation">,</span>
+              <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Make sure keys are unique.</span><span class="token template-punctuation string">`</span></span>
+            <span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+          keyToNewIndexMap<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>nextChild<span class="token punctuation">.</span>key<span class="token punctuation">,</span> i<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token comment">// 5.2 loop through old children left to be patched and try to patch</span>
+      <span class="token comment">// matching nodes &amp; remove nodes that are no longer present</span>
+      <span class="token keyword">let</span> j
+      <span class="token keyword">let</span> patched <span class="token operator">=</span> <span class="token number">0</span>
+      <span class="token comment">// 以新节点剩余的数量为需要patch的数量</span>
+      <span class="token keyword">const</span> toBePatched <span class="token operator">=</span> e2 <span class="token operator">-</span> s2 <span class="token operator">+</span> <span class="token number">1</span>
+      <span class="token keyword">let</span> moved <span class="token operator">=</span> <span class="token boolean">false</span>
+      <span class="token comment">// used to track whether any node has moved</span>
+      <span class="token keyword">let</span> maxNewIndexSoFar <span class="token operator">=</span> <span class="token number">0</span>
+      <span class="token comment">// works as Map&lt;newIndex, oldIndex&gt;</span>
+      <span class="token comment">// Note that oldIndex is offset by +1</span>
+      <span class="token comment">// and oldIndex = 0 is a special value indicating the new node has</span>
+      <span class="token comment">// no corresponding old node.</span>
+      <span class="token comment">// used for determining longest stable subsequence</span>
+      <span class="token comment">// 创建新节点的位置到旧节点位置的映射，初始化为0</span>
+      <span class="token keyword">const</span> newIndexToOldIndexMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Array</span><span class="token punctuation">(</span>toBePatched<span class="token punctuation">)</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> toBePatched<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> newIndexToOldIndexMap<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span>
+      <span class="token comment">// 遍历旧节点</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> s1<span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> e1<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> prevChild <span class="token operator">=</span> c1<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>patched <span class="token operator">&gt;=</span> toBePatched<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// all new children have been patched so this can only be a removal</span>
+          <span class="token function">unmount</span><span class="token punctuation">(</span>prevChild<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+          <span class="token keyword">continue</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">let</span> newIndex
+        <span class="token comment">// 如果旧节点的key存在，则获取他在新节点中的位置赋值给newIndex</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>prevChild<span class="token punctuation">.</span>key <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          newIndex <span class="token operator">=</span> keyToNewIndexMap<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>prevChild<span class="token punctuation">.</span>key<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+          <span class="token comment">// key-less node, try to locate a key-less node of the same type</span>
+          <span class="token keyword">for</span> <span class="token punctuation">(</span>j <span class="token operator">=</span> s2<span class="token punctuation">;</span> j <span class="token operator">&lt;=</span> e2<span class="token punctuation">;</span> j<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>
+              newIndexToOldIndexMap<span class="token punctuation">[</span>j <span class="token operator">-</span> s2<span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span>
+              <span class="token function">isSameVNodeType</span><span class="token punctuation">(</span>prevChild<span class="token punctuation">,</span> c2<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span>
+            <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+              newIndex <span class="token operator">=</span> j
+              <span class="token keyword">break</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// 如果newIndex不存在，说明该节点已经删除，则销毁该节点</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>newIndex <span class="token operator">===</span> <span class="token keyword">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">unmount</span><span class="token punctuation">(</span>prevChild<span class="token punctuation">,</span> parentComponent<span class="token punctuation">,</span> parentSuspense<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 否则，更新新节点的位置到旧节点位置的映射</span>
+          newIndexToOldIndexMap<span class="token punctuation">[</span>newIndex <span class="token operator">-</span> s2<span class="token punctuation">]</span> <span class="token operator">=</span> i <span class="token operator">+</span> <span class="token number">1</span>
+          <span class="token comment">// 通过maxNewIndexSoFar来记录每次newIndex的位置</span>
+          <span class="token comment">// 如果每次都是</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>newIndex <span class="token operator">&gt;=</span> maxNewIndexSoFar<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            maxNewIndexSoFar <span class="token operator">=</span> newIndex
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            moved <span class="token operator">=</span> <span class="token boolean">true</span>
+          <span class="token punctuation">}</span>
+          <span class="token function">patch</span><span class="token punctuation">(</span>
+            prevChild<span class="token punctuation">,</span>
+            c2<span class="token punctuation">[</span>newIndex<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            <span class="token keyword">null</span><span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG<span class="token punctuation">,</span>
+            optimized
+          <span class="token punctuation">)</span>
+          patched<span class="token operator">++</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token comment">// 5.3 move and mount</span>
+      <span class="token comment">// generate longest stable subsequence only when nodes have moved</span>
+      <span class="token keyword">const</span> increasingNewIndexSequence <span class="token operator">=</span> moved
+        <span class="token operator">?</span> <span class="token function">getSequence</span><span class="token punctuation">(</span>newIndexToOldIndexMap<span class="token punctuation">)</span>
+        <span class="token operator">:</span> <span class="token constant">EMPTY_ARR</span>
+      j <span class="token operator">=</span> increasingNewIndexSequence<span class="token punctuation">.</span>length <span class="token operator">-</span> <span class="token number">1</span>
+      <span class="token comment">// looping backwards so that we can use last patched node as anchor</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> toBePatched <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&gt;=</span> <span class="token number">0</span><span class="token punctuation">;</span> i<span class="token operator">--</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> nextIndex <span class="token operator">=</span> s2 <span class="token operator">+</span> i
+        <span class="token keyword">const</span> nextChild <span class="token operator">=</span> c2<span class="token punctuation">[</span>nextIndex<span class="token punctuation">]</span> <span class="token keyword">as</span> VNode
+        <span class="token keyword">const</span> anchor <span class="token operator">=</span>
+          nextIndex <span class="token operator">+</span> <span class="token number">1</span> <span class="token operator">&lt;</span> l2 <span class="token operator">?</span> <span class="token punctuation">(</span>c2<span class="token punctuation">[</span>nextIndex <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token keyword">as</span> VNode<span class="token punctuation">)</span><span class="token punctuation">.</span>el <span class="token operator">:</span> parentAnchor
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>newIndexToOldIndexMap<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// mount new</span>
+          <span class="token function">patch</span><span class="token punctuation">(</span>
+            <span class="token keyword">null</span><span class="token punctuation">,</span>
+            nextChild<span class="token punctuation">,</span>
+            container<span class="token punctuation">,</span>
+            anchor<span class="token punctuation">,</span>
+            parentComponent<span class="token punctuation">,</span>
+            parentSuspense<span class="token punctuation">,</span>
+            isSVG
+          <span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>moved<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// move if:</span>
+          <span class="token comment">// There is no stable subsequence (e.g. a reverse)</span>
+          <span class="token comment">// OR current node is not among the stable sequence</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>j <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> i <span class="token operator">!==</span> increasingNewIndexSequence<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token function">move</span><span class="token punctuation">(</span>nextChild<span class="token punctuation">,</span> container<span class="token punctuation">,</span> anchor<span class="token punctuation">,</span> MoveType<span class="token punctuation">.</span><span class="token constant">REORDER</span><span class="token punctuation">)</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            j<span class="token operator">--</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <!----> </main></div><div class="global-ui"></div></div>
+    <script src="/vue-next-analysis/assets/js/app.61e23bbe.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/11.61a3280b.js" defer></script>
+  </body>
+</html>
