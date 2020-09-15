@@ -23,7 +23,8 @@ module.exports = {
         children: [
           ['/runtime-core/createApp', '创建一个Vue3.x应用'],
           ['/runtime-core/vnode', 'vnode详解'],
-          ['/runtime-core/updateComponent', '组件更新及diff过程']
+          ['/runtime-core/patch', 'vnode的patch过程(节点的创建及更新)'],
+          ['/runtime-code/scheduler', '组件、节点的生命周期(scheduler)']
         ]
       },
       {

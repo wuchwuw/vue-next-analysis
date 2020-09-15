@@ -1304,6 +1304,8 @@ const processElement = (
       // 遍历旧节点
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
+        // 如果已经patch的数量大于toBePatched的数量
+        // 则销毁剩余的节点
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
           unmount(prevChild, parentComponent, parentSuspense, true)
@@ -1315,6 +1317,9 @@ const processElement = (
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
           // key-less node, try to locate a key-less node of the same type
+          // 如果没有找到旧节点在新节点中的位置
+          // 则遍历新节点，找到一个和当前旧节点相同的节点
+          // 并且这个新节点不能是一个已经被找到的节点
           for (j = s2; j <= e2; j++) {
             if (
               newIndexToOldIndexMap[j - s2] === 0 &&
@@ -1332,12 +1337,14 @@ const processElement = (
           // 否则，更新新节点的位置到旧节点位置的映射
           newIndexToOldIndexMap[newIndex - s2] = i + 1
           // 通过maxNewIndexSoFar来记录每次newIndex的位置
-          // 如果每次都是
+          // 如果每次都是递增，则证明旧节点在新节点中的顺序没有改变
+          // 如果顺序改变了，则将moved设置为true，代表将要移动节点
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex
           } else {
             moved = true
           }
+          // 调用patch，先同步新旧节点
           patch(
             prevChild,
             c2[newIndex] as VNode,
@@ -1354,18 +1361,25 @@ const processElement = (
 
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
+      // 找到新节点到旧节点映射的最长递增子序列
+      // 也就是说找到最多的不需要移动的节点，因为他们的位置是递增的说明他们在新节点中的位置顺序没有改变
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
         : EMPTY_ARR
       j = increasingNewIndexSequence.length - 1
       // looping backwards so that we can use last patched node as anchor
       for (i = toBePatched - 1; i >= 0; i--) {
+        // 从尾部开始遍历新节点
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
+        // 获取节点插入的锚点，如果当前的节点是最后一个，则插入到传入的锚点的前面
+        // 否则则插入到前一个节点的前面
         const anchor =
           nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
+          // 当映射中存在等于0的值，则证明当前节点是新增加的
+          // 调用patch创建新节点
           patch(
             null,
             nextChild,
@@ -1379,6 +1393,8 @@ const processElement = (
           // move if:
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
+          // 如果当前节点不在不需要移动的节点中
+          // 则只需要调用move移动该DOM节点
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
             move(nextChild, container, anchor, MoveType.REORDER)
           } else {
