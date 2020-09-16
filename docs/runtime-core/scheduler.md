@@ -99,7 +99,6 @@ function flushJobs(seen?: CountMap) {
   //    its update can be skipped.
   // Jobs can never be null before flush starts, since they are only invalidated
   // during execution of another flushed job.
-
   // 1、按effect id从小到大排列队列中的render effect，因为组件更新是从父到子的，父组件的effect id < 子组件的effect id
   // 2、当一个组件已经销毁时，会调用stop方法将停止该effect，跳过它的更新
   // 队列中的effect有可能在队列开始执行之后变为null，因为存在父组件更新后触发子组件的更新，而子组件的render effect刚好已经在队列中这种情况

@@ -86,6 +86,8 @@ function doWatch(
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
       // no cb -> simple effect
+      // 如果source是函数，并且不存在callback
+      // 那么这是通过watchEffect调用，则source可以接收一个参数onInvalidate用于注册cleanup函数
       getter = () => {
         if (instance && instance.isUnmounted) {
           return
@@ -115,7 +117,7 @@ function doWatch(
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
-
+  // 注册cleanup函数，它将在watch effect停止或者每次执行回调前调用
   let cleanup: () => void
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
@@ -202,16 +204,23 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
+  // 创建watch effect
   const runner = effect(getter, {
     lazy: true,
     onTrack,
     onTrigger,
     scheduler
   })
-
+  // 将当前effect保存到实例中
+  // 方便组件销毁时停止effect
   recordInstanceBoundEffect(runner)
 
   // initial run
+  // 如果存在回调函数，并且immediate = true
+  // 则直接执行回调函数，根据flush来决定执行的时机
+  // 否则先调用runner计算oldValue的值
+  // 如果不存在回调函数，则是通过watchEffect这个api调用
+  // 那么直接执行getter
   if (cb) {
     if (immediate) {
       job()
@@ -221,7 +230,7 @@ function doWatch(
   } else {
     runner()
   }
-
+  // 返回一个停止effect的函数，并将effect从当前实例移除
   return () => {
     stop(runner)
     if (instance) {
