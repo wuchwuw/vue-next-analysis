@@ -3,6 +3,9 @@ module.exports = {
   description: 'vue3.x源码分析',
   base: '/vue-next-analysis/',
   themeConfig: {
+    nav: [
+      { text: 'Github', link: 'https://github.com/wuchwuw/vue-next-analysis' }
+    ],
     sidebar: [
       ['/', '写在前面'],
       {
@@ -25,6 +28,7 @@ module.exports = {
           ['/runtime-core/vnode', 'vnode详解'],
           ['/runtime-core/patch', 'vnode的patch过程(节点的创建及更新)'],
           ['/runtime-code/scheduler', '组件、节点的生命周期(scheduler)']
+          ['/runtime-code/watch', 'watchApi']
         ]
       },
       {
