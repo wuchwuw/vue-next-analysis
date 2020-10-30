@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>模板编译过程 | VueNextAnalysis</title>
+    <meta name="generator" content="VuePress 1.5.2">
+    
+    <meta name="description" content="vue3.x源码分析">
+    <link rel="preload" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css" as="style"><link rel="preload" href="/vue-next-analysis/assets/js/app.e815251b.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/2.2e62c155.js" as="script"><link rel="preload" href="/vue-next-analysis/assets/js/6.3abf5312.js" as="script"><link rel="prefetch" href="/vue-next-analysis/assets/js/10.a54a0902.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/11.57834251.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/12.1732b9d2.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/13.1de6773b.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/14.84402eac.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/15.63bec2d5.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/3.c15b449a.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/4.7d5f245c.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/5.2fceb019.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/7.ba7a6428.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/8.de0da71b.js"><link rel="prefetch" href="/vue-next-analysis/assets/js/9.714fe913.js">
+    <link rel="stylesheet" href="/vue-next-analysis/assets/css/0.styles.8ce4316f.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/vue-next-analysis/" class="home-link router-link-active"><!----> <span class="site-name">VueNextAnalysis</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="https://github.com/wuchwuw/vue-next-analysis" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Github
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="https://github.com/wuchwuw/vue-next-analysis" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Github
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/vue-next-analysis/" aria-current="page" class="sidebar-link">写在前面</a></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>响应式原理</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/reactivity/reactivity.html" class="sidebar-link">reactive</a></li><li><a href="/vue-next-analysis/reactivity/ref.html" class="sidebar-link">ref</a></li><li><a href="/vue-next-analysis/reactivity/effect.html" class="sidebar-link">effect</a></li><li><a href="/vue-next-analysis/reactivity/computed.html" class="sidebar-link">computed</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>运行时</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/runtime-core/createApp.html" class="sidebar-link">创建一个Vue3.x应用</a></li><li><a href="/vue-next-analysis/runtime-core/vnode.html" class="sidebar-link">vnode详解</a></li><li><a href="/vue-next-analysis/runtime-core/patch.html" class="sidebar-link">vnode的patch过程(节点的创建及更新)</a></li><li><a href="/vue-next-analysis/runtime-core/scheduler.html" class="sidebar-link">组件、节点的生命周期(scheduler)</a></li><li><a href="/vue-next-analysis/runtime-core/watch.html" class="sidebar-link">watchApi</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>编译</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/vue-next-analysis/compiler/compiler.html" aria-current="page" class="active sidebar-link">模板编译过程</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/vue-next-analysis/compiler/compiler.html#模板编译过程" class="sidebar-link">模板编译过程</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/compiler/compiler.html#transform" class="sidebar-link">transform</a></li><li class="sidebar-sub-header"><a href="/vue-next-analysis/compiler/compiler.html#codegen" class="sidebar-link">codegen</a></li></ul></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="模板编译过程"><a href="#模板编译过程" class="header-anchor">#</a> 模板编译过程</h2> <p>当组件对象上不存在render函数时，Vue根据组件上的template，调用compile方法来编译模板，
+并生成渲染函数</p> <div class="language-js extra-class"><pre class="language-js"><code>Component<span class="token punctuation">.</span>render <span class="token operator">=</span> <span class="token function">compile</span><span class="token punctuation">(</span>Component<span class="token punctuation">.</span>template<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  isCustomElement<span class="token operator">:</span> instance<span class="token punctuation">.</span>appContext<span class="token punctuation">.</span>config<span class="token punctuation">.</span>isCustomElement<span class="token punctuation">,</span>
+  delimiters<span class="token operator">:</span> Component<span class="token punctuation">.</span>delimiters
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre></div><p>模板的编译过程主要分为三步：</p> <ul><li>1、ast parse: 根据传入的template生成ast树</li> <li>2、ast transform: 优化ast节点，生成codegenNode</li> <li>3、codegen: 根据codegenNode拼接渲染函数</li></ul> <h3 id="生成ast"><a href="#生成ast" class="header-anchor">#</a> 生成ast</h3> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">baseParse</span><span class="token punctuation">(</span>
+  <span class="token parameter">content<span class="token operator">:</span> string<span class="token punctuation">,</span>
+  options<span class="token operator">:</span> ParserOptions <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span></span>
+<span class="token punctuation">)</span><span class="token operator">:</span> RootNode <span class="token punctuation">{</span>
+  <span class="token comment">// 传入编译配置，生成一个保存编译配置的上下文</span>
+  <span class="token keyword">const</span> context <span class="token operator">=</span> <span class="token function">createParserContext</span><span class="token punctuation">(</span>content<span class="token punctuation">,</span> options<span class="token punctuation">)</span>
+  <span class="token comment">// 获得模板初始的行、列、偏移等信息</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token function">getCursor</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+  <span class="token comment">// 先创建子节点，再创建根节点</span>
+  <span class="token keyword">return</span> <span class="token function">createRoot</span><span class="token punctuation">(</span>
+    <span class="token function">parseChildren</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> TextModes<span class="token punctuation">.</span><span class="token constant">DATA</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">getSelection</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> start<span class="token punctuation">)</span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div><div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">parseChildren</span><span class="token punctuation">(</span>
+  <span class="token parameter">context<span class="token operator">:</span> ParserContext<span class="token punctuation">,</span>
+  mode<span class="token operator">:</span> TextModes<span class="token punctuation">,</span>
+  ancestors<span class="token operator">:</span> ElementNode<span class="token punctuation">[</span><span class="token punctuation">]</span></span>
+<span class="token punctuation">)</span><span class="token operator">:</span> TemplateChildNode<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> parent <span class="token operator">=</span> <span class="token function">last</span><span class="token punctuation">(</span>ancestors<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> ns <span class="token operator">=</span> parent <span class="token operator">?</span> parent<span class="token punctuation">.</span>ns <span class="token operator">:</span> Namespaces<span class="token punctuation">.</span><span class="token constant">HTML</span>
+  <span class="token keyword">const</span> nodes<span class="token operator">:</span> TemplateChildNode<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+  <span class="token comment">// 遍历模板字符串</span>
+  <span class="token comment">// 调用isEnd判断是否已经遍历结束</span>
+  <span class="token comment">// 如果模板为空，或者匹配到结束标签”&lt;/“开头并且结束标签的tag和ancestors中的相同</span>
+  <span class="token comment">// 则跳出循环处理结束标签</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">isEnd</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> mode<span class="token punctuation">,</span> ancestors<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    __TEST__ <span class="token operator">&amp;&amp;</span> <span class="token function">assert</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">.</span>length <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token comment">// 获得当前剩余的模板</span>
+    <span class="token keyword">const</span> s <span class="token operator">=</span> context<span class="token punctuation">.</span>source
+    <span class="token keyword">let</span> node<span class="token operator">:</span> TemplateChildNode <span class="token operator">|</span> TemplateChildNode<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">|</span> <span class="token keyword">undefined</span> <span class="token operator">=</span> <span class="token keyword">undefined</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>mode <span class="token operator">===</span> TextModes<span class="token punctuation">.</span><span class="token constant">DATA</span> <span class="token operator">||</span> mode <span class="token operator">===</span> TextModes<span class="token punctuation">.</span><span class="token constant">RCDATA</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>context<span class="token punctuation">.</span>inVPre <span class="token operator">&amp;&amp;</span> <span class="token function">startsWith</span><span class="token punctuation">(</span>s<span class="token punctuation">,</span> context<span class="token punctuation">.</span>options<span class="token punctuation">.</span>delimiters<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        node <span class="token operator">=</span> <span class="token function">parseInterpolation</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> mode<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>mode <span class="token operator">===</span> TextModes<span class="token punctuation">.</span><span class="token constant">DATA</span> <span class="token operator">&amp;&amp;</span> s<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'&lt;'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 当模板以”&lt;“开头，</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">.</span>length <span class="token operator">===</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 模板长度只有1时，报错</span>
+          <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">EOF_BEFORE_TAG_NAME</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'!'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 当模板以&quot;&lt;!&quot;开头，分为以下几种</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">startsWith</span><span class="token punctuation">(</span>s<span class="token punctuation">,</span> <span class="token string">'&lt;!--'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 匹配到&quot;&lt;!--&quot; 调用parseComment生成注释节点</span>
+            node <span class="token operator">=</span> <span class="token function">parseComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">startsWith</span><span class="token punctuation">(</span>s<span class="token punctuation">,</span> <span class="token string">'&lt;!DOCTYPE'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 匹配到&quot;&lt;!--DOCTYPE&quot; 调用parseBogusComment生成注释节点</span>
+            node <span class="token operator">=</span> <span class="token function">parseBogusComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">startsWith</span><span class="token punctuation">(</span>s<span class="token punctuation">,</span> <span class="token string">'&lt;![CDATA['</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 匹配到 &quot;&lt;!--CDATA&quot;开头</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>ns <span class="token operator">!==</span> Namespaces<span class="token punctuation">.</span><span class="token constant">HTML</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+              node <span class="token operator">=</span> <span class="token function">parseCDATA</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ancestors<span class="token punctuation">)</span>
+            <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+              <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">CDATA_IN_HTML_CONTENT</span><span class="token punctuation">)</span>
+              node <span class="token operator">=</span> <span class="token function">parseBogusComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 不符合以上情况，报错并将内容生成注释节点</span>
+            <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">INCORRECTLY_OPENED_COMMENT</span><span class="token punctuation">)</span>
+            node <span class="token operator">=</span> <span class="token function">parseBogusComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'/'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 以“&lt;/”开头</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">.</span>length <span class="token operator">===</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 如果模板只剩“&lt;/&quot;2个字符，报错</span>
+            <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">EOF_BEFORE_TAG_NAME</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'&gt;'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 如果匹配到”&lt;/&gt;“，报错并调用advanceBy跳过这3个字符</span>
+            <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">MISSING_END_TAG_NAME</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span>
+            <span class="token function">advanceBy</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span>
+            <span class="token keyword">continue</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token regex">/[a-z]/i</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 如果匹配到&quot;&lt;/ + 字母&quot;</span>
+            <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">X_INVALID_END_TAG</span><span class="token punctuation">)</span>
+            <span class="token function">parseTag</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> TagType<span class="token punctuation">.</span>End<span class="token punctuation">,</span> parent<span class="token punctuation">)</span>
+            <span class="token keyword">continue</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 不符合以上情况，报错并将内容生成注释节点</span>
+            <span class="token function">emitError</span><span class="token punctuation">(</span>
+              context<span class="token punctuation">,</span>
+              ErrorCodes<span class="token punctuation">.</span><span class="token constant">INVALID_FIRST_CHARACTER_OF_TAG_NAME</span><span class="token punctuation">,</span>
+              <span class="token number">2</span>
+            <span class="token punctuation">)</span>
+            node <span class="token operator">=</span> <span class="token function">parseBogusComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token regex">/[a-z]/i</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 以”&lt; + 字母开头“则调用parseElement生成element节点</span>
+          node <span class="token operator">=</span> <span class="token function">parseElement</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ancestors<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'?'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 以“&lt;?”开头，报错并生成注释节点</span>
+          <span class="token function">emitError</span><span class="token punctuation">(</span>
+            context<span class="token punctuation">,</span>
+            ErrorCodes<span class="token punctuation">.</span><span class="token constant">UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME</span><span class="token punctuation">,</span>
+            <span class="token number">1</span>
+          <span class="token punctuation">)</span>
+          node <span class="token operator">=</span> <span class="token function">parseBogusComment</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 不符合以上任意一种，报错</span>
+          <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">INVALID_FIRST_CHARACTER_OF_TAG_NAME</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果node不存在，即不符合上面任何一种，则调用parseText找到文本第一个中&quot;&lt;&quot;或者&quot;{{&quot;</span>
+    <span class="token comment">// 将之前的文本生成一个文本节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>node<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      node <span class="token operator">=</span> <span class="token function">parseText</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> mode<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 将生成的节点保存到nodes中</span>
+    <span class="token comment">// 如果当前生成的节点是文本节点，并且前一个节点也是文本节点</span>
+    <span class="token comment">// 则合并两个文本节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isArray</span><span class="token punctuation">(</span>node<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> node<span class="token punctuation">.</span>length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">pushNode</span><span class="token punctuation">(</span>nodes<span class="token punctuation">,</span> node<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token function">pushNode</span><span class="token punctuation">(</span>nodes<span class="token punctuation">,</span> node<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment">// 处理节点间的空格</span>
+  <span class="token keyword">let</span> removedWhitespace <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>mode <span class="token operator">!==</span> TextModes<span class="token punctuation">.</span><span class="token constant">RAWTEXT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果不在pre节点中</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>context<span class="token punctuation">.</span>inPre<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> nodes<span class="token punctuation">.</span>length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> node <span class="token operator">=</span> nodes<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+        <span class="token comment">// 遍历所有节点，如果是文本节点</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>node<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 如果文本开头不存在换行</span>
+          <span class="token comment">// 则以下情况需要过滤空白节点</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token regex">/[^\t\r\n\f ]/</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>node<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">const</span> prev <span class="token operator">=</span> nodes<span class="token punctuation">[</span>i <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span>
+            <span class="token keyword">const</span> next <span class="token operator">=</span> nodes<span class="token punctuation">[</span>i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span>
+            <span class="token comment">// 1、空白节点是第一或者最后一个节点</span>
+            <span class="token comment">// 2、空白节点在注释节点的前或者后</span>
+            <span class="token comment">// 3、空白节点在2个element节点中间，并且存在换行</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>
+              <span class="token operator">!</span>prev <span class="token operator">||</span>
+              <span class="token operator">!</span>next <span class="token operator">||</span>
+              prev<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">COMMENT</span> <span class="token operator">||</span>
+              next<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">COMMENT</span> <span class="token operator">||</span>
+              <span class="token punctuation">(</span>prev<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">ELEMENT</span> <span class="token operator">&amp;&amp;</span>
+                next<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">ELEMENT</span> <span class="token operator">&amp;&amp;</span>
+                <span class="token regex">/[\r\n]/</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>node<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+              removedWhitespace <span class="token operator">=</span> <span class="token boolean">true</span>
+              nodes<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">null</span> <span class="token keyword">as</span> any
+            <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+              <span class="token comment">// 否则，将文本内的连续空格压缩为单个空格</span>
+              node<span class="token punctuation">.</span>content <span class="token operator">=</span> <span class="token string">' '</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 否则将换行替换为空格</span>
+            node<span class="token punctuation">.</span>content <span class="token operator">=</span> node<span class="token punctuation">.</span>content<span class="token punctuation">.</span><span class="token function">replace</span><span class="token punctuation">(</span><span class="token regex">/[\t\r\n\f ]+/g</span><span class="token punctuation">,</span> <span class="token string">' '</span><span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>
+          <span class="token operator">!</span>__DEV__ <span class="token operator">&amp;&amp;</span>
+          node<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">COMMENT</span> <span class="token operator">&amp;&amp;</span>
+          <span class="token operator">!</span>context<span class="token punctuation">.</span>options<span class="token punctuation">.</span>comments
+        <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 生产环境中过滤所有注释节点</span>
+          removedWhitespace <span class="token operator">=</span> <span class="token boolean">true</span>
+          nodes<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">null</span> <span class="token keyword">as</span> any
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>parent <span class="token operator">&amp;&amp;</span> context<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">isPreTag</span><span class="token punctuation">(</span>parent<span class="token punctuation">.</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 如果当前节点的父节点是pre，则去掉当前文本开头的换行</span>
+      <span class="token keyword">const</span> first <span class="token operator">=</span> nodes<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>first <span class="token operator">&amp;&amp;</span> first<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        first<span class="token punctuation">.</span>content <span class="token operator">=</span> first<span class="token punctuation">.</span>content<span class="token punctuation">.</span><span class="token function">replace</span><span class="token punctuation">(</span><span class="token regex">/^\r?\n/</span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 如果需要过滤空白节点则调用filter过滤</span>
+  <span class="token keyword">return</span> removedWhitespace <span class="token operator">?</span> nodes<span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>Boolean<span class="token punctuation">)</span> <span class="token operator">:</span> nodes
+<span class="token punctuation">}</span>
+</code></pre></div><p>可以看到parseChildren方法大部分判断都是处理一些特殊的节点，只有符合”&lt; + 字母的情况“才调用parseElement
+去创建一个ast节点</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">parseElement</span><span class="token punctuation">(</span>
+  <span class="token parameter">context<span class="token operator">:</span> ParserContext<span class="token punctuation">,</span>
+  ancestors<span class="token operator">:</span> ElementNode<span class="token punctuation">[</span><span class="token punctuation">]</span></span>
+<span class="token punctuation">)</span><span class="token operator">:</span> ElementNode <span class="token operator">|</span> <span class="token keyword">undefined</span> <span class="token punctuation">{</span>
+  __TEST__ <span class="token operator">&amp;&amp;</span> <span class="token function">assert</span><span class="token punctuation">(</span><span class="token regex">/^&lt;[a-z]/i</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+  <span class="token comment">// 节点是否在pre标签或者v-pre指令中</span>
+  <span class="token keyword">const</span> wasInPre <span class="token operator">=</span> context<span class="token punctuation">.</span>inPre
+  <span class="token keyword">const</span> wasInVPre <span class="token operator">=</span> context<span class="token punctuation">.</span>inVPre
+  <span class="token comment">// 获取父节点</span>
+  <span class="token keyword">const</span> parent <span class="token operator">=</span> <span class="token function">last</span><span class="token punctuation">(</span>ancestors<span class="token punctuation">)</span>
+  <span class="token comment">// 调用parseTag创建ast节点</span>
+  <span class="token keyword">const</span> element <span class="token operator">=</span> <span class="token function">parseTag</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> TagType<span class="token punctuation">.</span>Start<span class="token punctuation">,</span> parent<span class="token punctuation">)</span>
+  <span class="token comment">// 如果解析后节点是pre或者有v-pre指令，则说明该节点是pre或者存在v-pre指令</span>
+  <span class="token keyword">const</span> isPreBoundary <span class="token operator">=</span> context<span class="token punctuation">.</span>inPre <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>wasInPre
+  <span class="token keyword">const</span> isVPreBoundary <span class="token operator">=</span> context<span class="token punctuation">.</span>inVPre <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>wasInVPre
+  <span class="token comment">// 如果是自闭合的标签，则直接返回</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>element<span class="token punctuation">.</span>isSelfClosing <span class="token operator">||</span> context<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">isVoidTag</span><span class="token punctuation">(</span>element<span class="token punctuation">.</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> element
+  <span class="token punctuation">}</span>
+
+  <span class="token comment">// 处理子节点</span>
+  <span class="token comment">// 将当前节点添加到ancestors中</span>
+  ancestors<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>element<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> mode <span class="token operator">=</span> context<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">getTextMode</span><span class="token punctuation">(</span>element<span class="token punctuation">,</span> parent<span class="token punctuation">)</span>
+  <span class="token comment">// 递归调用parseChildren处理子节点</span>
+  <span class="token keyword">const</span> children <span class="token operator">=</span> <span class="token function">parseChildren</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> mode<span class="token punctuation">,</span> ancestors<span class="token punctuation">)</span>
+  ancestors<span class="token punctuation">.</span><span class="token function">pop</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment">// 将子节点添加到children属性上</span>
+  element<span class="token punctuation">.</span>children <span class="token operator">=</span> children
+
+  <span class="token comment">// 处理闭合标签</span>
+  <span class="token comment">// 当匹配到”&lt;/&quot;，并且闭合标签内的tag和起始标签的tag相同</span>
+  <span class="token comment">// 则调用parseTag闭合节点</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">startsWithEndTagOpen</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">,</span> element<span class="token punctuation">.</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">parseTag</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> TagType<span class="token punctuation">.</span>End<span class="token punctuation">,</span> parent<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 否则提示找不到闭合标签</span>
+    <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">X_MISSING_END_TAG</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> element<span class="token punctuation">.</span>loc<span class="token punctuation">.</span>start<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">.</span>length <span class="token operator">===</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> element<span class="token punctuation">.</span>tag<span class="token punctuation">.</span><span class="token function">toLowerCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">===</span> <span class="token string">'script'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> first <span class="token operator">=</span> children<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>first <span class="token operator">&amp;&amp;</span> <span class="token function">startsWith</span><span class="token punctuation">(</span>first<span class="token punctuation">.</span>loc<span class="token punctuation">.</span>source<span class="token punctuation">,</span> <span class="token string">'&lt;!--'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 调用getSelection获得节点在模板中的起始、结束位置以及节点的原字符串</span>
+  element<span class="token punctuation">.</span>loc <span class="token operator">=</span> <span class="token function">getSelection</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> element<span class="token punctuation">.</span>loc<span class="token punctuation">.</span>start<span class="token punctuation">)</span>
+  <span class="token comment">// 如果当前节点是pre或者存在v-pre指令，则解析完当前节点后需要将inPre、inVPre重新设置为false</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>isPreBoundary<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    context<span class="token punctuation">.</span>inPre <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>isVPreBoundary<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    context<span class="token punctuation">.</span>inVPre <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> element
+<span class="token punctuation">}</span>
+</code></pre></div><p>从parseElement中可以看到不管是开始还是结束标签，都需要调用parseTag来处理，根据传入的type来判断是处理开始还是结束标签</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">parseTag</span><span class="token punctuation">(</span>
+  <span class="token parameter">context<span class="token operator">:</span> ParserContext<span class="token punctuation">,</span>
+  type<span class="token operator">:</span> TagType<span class="token punctuation">,</span>
+  parent<span class="token operator">:</span> ElementNode <span class="token operator">|</span> <span class="token keyword">undefined</span></span>
+<span class="token punctuation">)</span><span class="token operator">:</span> ElementNode <span class="token punctuation">{</span>
+  __TEST__ <span class="token operator">&amp;&amp;</span> <span class="token function">assert</span><span class="token punctuation">(</span><span class="token regex">/^&lt;\/?[a-z]/i</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">)</span><span class="token punctuation">)</span>
+  __TEST__ <span class="token operator">&amp;&amp;</span>
+    <span class="token function">assert</span><span class="token punctuation">(</span>
+      type <span class="token operator">===</span> <span class="token punctuation">(</span><span class="token function">startsWith</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">,</span> <span class="token string">'&lt;/'</span><span class="token punctuation">)</span> <span class="token operator">?</span> TagType<span class="token punctuation">.</span>End <span class="token operator">:</span> TagType<span class="token punctuation">.</span>Start<span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+
+  <span class="token comment">// 获得标签内的tag</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token function">getCursor</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> match <span class="token operator">=</span> <span class="token regex">/^&lt;\/?([a-z][^\t\r\n\f /&gt;]*)/i</span><span class="token punctuation">.</span><span class="token function">exec</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">)</span><span class="token operator">!</span>
+  <span class="token keyword">const</span> tag <span class="token operator">=</span> match<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>
+  <span class="token keyword">const</span> ns <span class="token operator">=</span> context<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">getNamespace</span><span class="token punctuation">(</span>tag<span class="token punctuation">,</span> parent<span class="token punctuation">)</span>
+  <span class="token comment">// 将模板前进到第一个props之前</span>
+  <span class="token function">advanceBy</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> match<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>length<span class="token punctuation">)</span>
+  <span class="token function">advanceSpaces</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+
+  <span class="token comment">// save current state in case we need to re-parse attributes with v-pre</span>
+  <span class="token comment">// 保存解析props之前的模板，如果解析props后存在v-pre指令，需要重新解析props</span>
+  <span class="token keyword">const</span> cursor <span class="token operator">=</span> <span class="token function">getCursor</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span>
+  <span class="token keyword">const</span> currentSource <span class="token operator">=</span> context<span class="token punctuation">.</span>source
+
+  <span class="token comment">// 解析props</span>
+  <span class="token keyword">let</span> props <span class="token operator">=</span> <span class="token function">parseAttributes</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> type<span class="token punctuation">)</span>
+
+  <span class="token comment">// 如果是pre标签 将上下文的inPre设置为true</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>context<span class="token punctuation">.</span>options<span class="token punctuation">.</span><span class="token function">isPreTag</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    context<span class="token punctuation">.</span>inPre <span class="token operator">=</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment">// 如果存在v-pre指令</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>
+    <span class="token operator">!</span>context<span class="token punctuation">.</span>inVPre <span class="token operator">&amp;&amp;</span>
+    props<span class="token punctuation">.</span><span class="token function">some</span><span class="token punctuation">(</span><span class="token parameter">p</span> <span class="token operator">=&gt;</span> p<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">DIRECTIVE</span> <span class="token operator">&amp;&amp;</span> p<span class="token punctuation">.</span>name <span class="token operator">===</span> <span class="token string">'pre'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 则将inVPre设置为true,并将解析props之前的模板赋值，并重新解析</span>
+    context<span class="token punctuation">.</span>inVPre <span class="token operator">=</span> <span class="token boolean">true</span>
+    <span class="token comment">// reset context</span>
+    <span class="token function">extend</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> cursor<span class="token punctuation">)</span>
+    context<span class="token punctuation">.</span>source <span class="token operator">=</span> currentSource
+    <span class="token comment">// 解析后过滤v-pre指令</span>
+    props <span class="token operator">=</span> <span class="token function">parseAttributes</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> type<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span><span class="token parameter">p</span> <span class="token operator">=&gt;</span> p<span class="token punctuation">.</span>name <span class="token operator">!==</span> <span class="token string">'v-pre'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment">// Tag close.</span>
+  <span class="token comment">// 闭合开始或者结束标签</span>
+  <span class="token keyword">let</span> isSelfClosing <span class="token operator">=</span> <span class="token boolean">false</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">.</span>length <span class="token operator">===</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">EOF_IN_TAG</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果匹配到&quot;/&gt;&quot;，说明标签是自闭合标签</span>
+    isSelfClosing <span class="token operator">=</span> <span class="token function">startsWith</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>source<span class="token punctuation">,</span> <span class="token string">'/&gt;'</span><span class="token punctuation">)</span>
+    <span class="token comment">// 如果是在处理结束标签时，说明匹配到”&lt;/tag/&gt;“，则直接报错</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>type <span class="token operator">===</span> TagType<span class="token punctuation">.</span>End <span class="token operator">&amp;&amp;</span> isSelfClosing<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">emitError</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> ErrorCodes<span class="token punctuation">.</span><span class="token constant">END_TAG_WITH_TRAILING_SOLIDUS</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 根据是否是自闭合标签前进&quot;&gt;&quot;或者&quot;/&gt;&quot;</span>
+    <span class="token function">advanceBy</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> isSelfClosing <span class="token operator">?</span> <span class="token number">2</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 使用tagType细分标签的类型</span>
+  <span class="token keyword">let</span> tagType <span class="token operator">=</span> ElementTypes<span class="token punctuation">.</span><span class="token constant">ELEMENT</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> context<span class="token punctuation">.</span>options
+  <span class="token comment">// 如果当前标签不是在v-pre中，也不是自定义标签</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>context<span class="token punctuation">.</span>inVPre <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>options<span class="token punctuation">.</span><span class="token function">isCustomElement</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 那么先判断有没有is指令</span>
+    <span class="token keyword">const</span> hasVIs <span class="token operator">=</span> props<span class="token punctuation">.</span><span class="token function">some</span><span class="token punctuation">(</span>
+      <span class="token parameter">p</span> <span class="token operator">=&gt;</span> p<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">DIRECTIVE</span> <span class="token operator">&amp;&amp;</span> p<span class="token punctuation">.</span>name <span class="token operator">===</span> <span class="token string">'is'</span>
+    <span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>options<span class="token punctuation">.</span>isNativeTag <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>hasVIs<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 如果不存在is指令，并且不是原生标签，则tagType设置为COMPONENT</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>options<span class="token punctuation">.</span><span class="token function">isNativeTag</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> tagType <span class="token operator">=</span> ElementTypes<span class="token punctuation">.</span><span class="token constant">COMPONENT</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      <span class="token comment">// 如果is存在或者标签是Teleport、Suspense、KeepAlive、BaseTransition</span>
+      <span class="token comment">// 中的一个、或者标签是内建的Transition、TransitionGroup、或者标签以大写开头、</span>
+      <span class="token comment">// 或者标签等于'component'，都将tagType设置为COMPONENT</span>
+      hasVIs <span class="token operator">||</span>
+      <span class="token function">isCoreComponent</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span> <span class="token operator">||</span>
+      <span class="token punctuation">(</span>options<span class="token punctuation">.</span>isBuiltInComponent <span class="token operator">&amp;&amp;</span> options<span class="token punctuation">.</span><span class="token function">isBuiltInComponent</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">||</span>
+      <span class="token regex">/^[A-Z]/</span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>tag<span class="token punctuation">)</span> <span class="token operator">||</span>
+      tag <span class="token operator">===</span> <span class="token string">'component'</span>
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      tagType <span class="token operator">=</span> ElementTypes<span class="token punctuation">.</span><span class="token constant">COMPONENT</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 如果tag为slot、则tagType = ElementTypes.SLOT</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>tag <span class="token operator">===</span> <span class="token string">'slot'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      tagType <span class="token operator">=</span> ElementTypes<span class="token punctuation">.</span><span class="token constant">SLOT</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>
+      <span class="token comment">// 如果tag为template、并且存在`if,else,else-if,for,slot`等指令，则tagType = ElementTypes.TEMPLATE</span>
+      tag <span class="token operator">===</span> <span class="token string">'template'</span> <span class="token operator">&amp;&amp;</span>
+      props<span class="token punctuation">.</span><span class="token function">some</span><span class="token punctuation">(</span><span class="token parameter">p</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>
+          p<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">DIRECTIVE</span> <span class="token operator">&amp;&amp;</span> <span class="token function">isSpecialTemplateDirective</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>name<span class="token punctuation">)</span>
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      tagType <span class="token operator">=</span> ElementTypes<span class="token punctuation">.</span><span class="token constant">TEMPLATE</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 返回ast对象</span>
+  <span class="token keyword">return</span> <span class="token punctuation">{</span>
+    type<span class="token operator">:</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">ELEMENT</span><span class="token punctuation">,</span>
+    ns<span class="token punctuation">,</span>
+    tag<span class="token punctuation">,</span>
+    tagType<span class="token punctuation">,</span>
+    props<span class="token punctuation">,</span>
+    isSelfClosing<span class="token punctuation">,</span>
+    children<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    loc<span class="token operator">:</span> <span class="token function">getSelection</span><span class="token punctuation">(</span>context<span class="token punctuation">,</span> start<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    codegenNode<span class="token operator">:</span> <span class="token keyword">undefined</span> <span class="token comment">// to be created during transform phase</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>通过模板编译生成ast节点的过程其实就是不断遍历模板去匹配标签，并且通过递归编译子节点的过程建立节点的父子关系。</p> <h2 id="transform"><a href="#transform" class="header-anchor">#</a> transform</h2> <p>解析模板生成的ast树并不能直接用于生成渲染函数，而是要经过transform方法遍历所有ast节点，根据
+ast节点的类型来调用不同helper函数，这些helper函数将会对针对特定的ast节点进一步优化，生成可供codegen函数使用的codegenNode，这里就不具体对每一个helper函数展开分析，作为一个例子我们仅分析一下根ast节点的transform过程：</p> <p>之前在分析patch过程的时候我们说到，Vue3.0现在已经支持在模板写多个根节点了，但是一棵树总是需要一个根节点的，所以Vue会帮你生成一个FRAGMENT节点作为根节点，这个节点不会在真实的DOM中显示出来，这个过程就是在ast树的根节点的transform过程中实现的。</p> <div class="language-js extra-class"><pre class="language-js"><code>
+<span class="token keyword">function</span> <span class="token function">createRootCodegen</span><span class="token punctuation">(</span><span class="token parameter">root<span class="token operator">:</span> RootNode<span class="token punctuation">,</span> context<span class="token operator">:</span> TransformContext</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token punctuation">{</span> helper <span class="token punctuation">}</span> <span class="token operator">=</span> context
+  <span class="token keyword">const</span> <span class="token punctuation">{</span> children <span class="token punctuation">}</span> <span class="token operator">=</span> root
+  <span class="token keyword">const</span> child <span class="token operator">=</span> children<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+  <span class="token comment">// 当ast树的根节点的子节点只有一个节点</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>children<span class="token punctuation">.</span>length <span class="token operator">===</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 并且它是一个element节点</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isSingleElementRoot</span><span class="token punctuation">(</span>root<span class="token punctuation">,</span> child<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> child<span class="token punctuation">.</span>codegenNode<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 则将该节点标记为block节点</span>
+      <span class="token keyword">const</span> codegenNode <span class="token operator">=</span> child<span class="token punctuation">.</span>codegenNode
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>codegenNode<span class="token punctuation">.</span>type <span class="token operator">===</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">VNODE_CALL</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        codegenNode<span class="token punctuation">.</span>isBlock <span class="token operator">=</span> <span class="token boolean">true</span>
+        <span class="token function">helper</span><span class="token punctuation">(</span><span class="token constant">OPEN_BLOCK</span><span class="token punctuation">)</span>
+        <span class="token function">helper</span><span class="token punctuation">(</span><span class="token constant">CREATE_BLOCK</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      root<span class="token punctuation">.</span>codegenNode <span class="token operator">=</span> codegenNode
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// - single &lt;slot/&gt;, IfNode, ForNode: already blocks.</span>
+      <span class="token comment">// - single text node: always patched.</span>
+      <span class="token comment">// root codegen falls through via genNode()</span>
+      root<span class="token punctuation">.</span>codegenNode <span class="token operator">=</span> child
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>children<span class="token punctuation">.</span>length <span class="token operator">&gt;</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 如果子节点存在多个，则生成一个FRAGMENT节点保存在codegenNode属性上</span>
+    root<span class="token punctuation">.</span>codegenNode <span class="token operator">=</span> <span class="token function">createVNodeCall</span><span class="token punctuation">(</span>
+      context<span class="token punctuation">,</span>
+      <span class="token function">helper</span><span class="token punctuation">(</span><span class="token constant">FRAGMENT</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token keyword">undefined</span><span class="token punctuation">,</span>
+      root<span class="token punctuation">.</span>children<span class="token punctuation">,</span>
+      <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>PatchFlags<span class="token punctuation">.</span><span class="token constant">STABLE_FRAGMENT</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> /* </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>
+        PatchFlagNames<span class="token punctuation">[</span>PatchFlags<span class="token punctuation">.</span><span class="token constant">STABLE_FRAGMENT</span><span class="token punctuation">]</span>
+      <span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> */</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+      <span class="token keyword">undefined</span><span class="token punctuation">,</span>
+      <span class="token keyword">undefined</span><span class="token punctuation">,</span>
+      <span class="token boolean">true</span>
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// no children = noop. codegen will return null.</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre></div><p>可以看到transform的过程就是在ast节点的基础上通过特定的helper函数，这些函数会修改原本ast节点上的属性，并将修改后的节点保存在codegenNode属性上，用于生成渲染函数</p> <h2 id="codegen"><a href="#codegen" class="header-anchor">#</a> codegen</h2> <p>codegen的过程其实就是拼接字符串，这里截取了genNode函数的部分代码，可以看到通过判断codegenNode上的类型调用不同的函数，这些函数的实现基本上就是根据codegenNode上的内容输出相应的字符串然后拼接到最终的代码字符串上，而整个codegen的过程就是递归的调用genNode函数遍历所有codegenNode，最后再通过new Function来创建渲染函数。</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">function</span> <span class="token function">genNode</span><span class="token punctuation">(</span><span class="token parameter">node<span class="token operator">:</span> CodegenNode <span class="token operator">|</span> symbol <span class="token operator">|</span> string<span class="token punctuation">,</span> context<span class="token operator">:</span> CodegenContext</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token operator">...</span>
+  <span class="token keyword">switch</span> <span class="token punctuation">(</span>node<span class="token punctuation">.</span>type<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">ELEMENT</span><span class="token operator">:</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">IF</span><span class="token operator">:</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">FOR</span><span class="token operator">:</span>
+      __DEV__ <span class="token operator">&amp;&amp;</span>
+        <span class="token function">assert</span><span class="token punctuation">(</span>
+          node<span class="token punctuation">.</span>codegenNode <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+          <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Codegen node is missing for element/if/for node. </span><span class="token template-punctuation string">`</span></span> <span class="token operator">+</span>
+            <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Apply appropriate transforms first.</span><span class="token template-punctuation string">`</span></span>
+        <span class="token punctuation">)</span>
+      <span class="token function">genNode</span><span class="token punctuation">(</span>node<span class="token punctuation">.</span>codegenNode<span class="token operator">!</span><span class="token punctuation">,</span> context<span class="token punctuation">)</span>
+      <span class="token keyword">break</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token operator">:</span>
+      <span class="token function">genText</span><span class="token punctuation">(</span>node<span class="token punctuation">,</span> context<span class="token punctuation">)</span>
+      <span class="token keyword">break</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">COMMENT</span><span class="token operator">:</span>
+      <span class="token function">genComment</span><span class="token punctuation">(</span>node<span class="token punctuation">,</span> context<span class="token punctuation">)</span>
+      <span class="token keyword">break</span>
+    <span class="token keyword">case</span> NodeTypes<span class="token punctuation">.</span><span class="token constant">VNODE_CALL</span><span class="token operator">:</span>
+      <span class="token function">genVNodeCall</span><span class="token punctuation">(</span>node<span class="token punctuation">,</span> context<span class="token punctuation">)</span>
+      <span class="token keyword">break</span>
+    <span class="token operator">...</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/vue-next-analysis/runtime-core/watch.html" class="prev">
+        watchApi
+      </a></span> <!----></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/vue-next-analysis/assets/js/app.e815251b.js" defer></script><script src="/vue-next-analysis/assets/js/2.2e62c155.js" defer></script><script src="/vue-next-analysis/assets/js/6.3abf5312.js" defer></script>
+  </body>
+</html>
