@@ -27,15 +27,17 @@ module.exports = {
           ['/runtime-core/createApp', '创建一个Vue3.x应用'],
           ['/runtime-core/vnode', 'vnode详解'],
           ['/runtime-core/patch', 'vnode的patch过程(节点的创建及更新)'],
-          ['/runtime-code/scheduler', '组件、节点的生命周期(scheduler)']
-          ['/runtime-code/watch', 'watchApi']
+          ['/runtime-core/scheduler', '组件、节点的生命周期(scheduler)'],
+          ['/runtime-core/watch', 'watchApi']
         ]
       },
       {
         title: '编译',
         collapsable: false,
         sidebarDepth: 1,
-        children: []
+        children: [
+          ['/compiler/compiler', '模板编译过程']
+        ]
       }
     ]
   }

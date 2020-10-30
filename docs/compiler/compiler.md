@@ -3,25 +3,20 @@
 当组件对象上不存在render函数时，Vue根据组件上的template，调用compile方法来编译模板，
 并生成渲染函数
 
-```js
-
+```js
 Component.render = compile(Component.template, {
   isCustomElement: instance.appContext.config.isCustomElement,
   delimiters: Component.delimiters
 })
-
 ```
 
-模板的编译过程主要分为二步：
+模板的编译过程主要分为三步：
 
-+ 根据传入的template生成ast
-+ 根据生成的ast生成渲染函数
++ 1、ast parse: 根据传入的template生成ast树
++ 2、ast transform: 优化ast节点，生成codegenNode
++ 3、codegen: 根据codegenNode拼接渲染函数
 
 ### 生成ast
-
-```js
-const ast = isString(template) ? baseParse(template, options) : template
-```
 
 ```js
 export function baseParse(
@@ -51,6 +46,8 @@ function parseChildren(
   const nodes: TemplateChildNode[] = []
   // 遍历模板字符串
   // 调用isEnd判断是否已经遍历结束
+  // 如果模板为空，或者匹配到结束标签”</“开头并且结束标签的tag和ancestors中的相同
+  // 则跳出循环处理结束标签
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
     // 获得当前剩余的模板
@@ -220,6 +217,7 @@ function parseElement(
   const parent = last(ancestors)
   // 调用parseTag创建ast节点
   const element = parseTag(context, TagType.Start, parent)
+  // 如果解析后节点是pre或者有v-pre指令，则说明该节点是pre或者存在v-pre指令
   const isPreBoundary = context.inPre && !wasInPre
   const isVPreBoundary = context.inVPre && !wasInVPre
   // 如果是自闭合的标签，则直接返回
@@ -254,7 +252,7 @@ function parseElement(
   }
   // 调用getSelection获得节点在模板中的起始、结束位置以及节点的原字符串
   element.loc = getSelection(context, element.loc.start)
-  // 如果当前节点是pre或者存在v-pre指令，则将inPre、inVPre设置为false
+  // 如果当前节点是pre或者存在v-pre指令，则解析完当前节点后需要将inPre、inVPre重新设置为false
   if (isPreBoundary) {
     context.inPre = false
   }
@@ -279,61 +277,73 @@ function parseTag(
       type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
     )
 
-  // Tag open.
+  // 获得标签内的tag
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
   const ns = context.options.getNamespace(tag, parent)
-
+  // 将模板前进到第一个props之前
   advanceBy(context, match[0].length)
   advanceSpaces(context)
 
   // save current state in case we need to re-parse attributes with v-pre
+  // 保存解析props之前的模板，如果解析props后存在v-pre指令，需要重新解析props
   const cursor = getCursor(context)
   const currentSource = context.source
 
-  // Attributes.
+  // 解析props
   let props = parseAttributes(context, type)
 
-  // check <pre> tag
+  // 如果是pre标签 将上下文的inPre设置为true
   if (context.options.isPreTag(tag)) {
     context.inPre = true
   }
 
-  // check v-pre
+  // 如果存在v-pre指令
   if (
     !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
+    // 则将inVPre设置为true,并将解析props之前的模板赋值，并重新解析
     context.inVPre = true
     // reset context
     extend(context, cursor)
     context.source = currentSource
-    // re-parse attrs and filter out v-pre itself
+    // 解析后过滤v-pre指令
     props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
   }
 
   // Tag close.
+  // 闭合开始或者结束标签
   let isSelfClosing = false
   if (context.source.length === 0) {
     emitError(context, ErrorCodes.EOF_IN_TAG)
   } else {
+    // 如果匹配到"/>"，说明标签是自闭合标签
     isSelfClosing = startsWith(context.source, '/>')
+    // 如果是在处理结束标签时，说明匹配到”</tag/>“，则直接报错
     if (type === TagType.End && isSelfClosing) {
       emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
     }
+    // 根据是否是自闭合标签前进">"或者"/>"
     advanceBy(context, isSelfClosing ? 2 : 1)
   }
-
+  // 使用tagType细分标签的类型
   let tagType = ElementTypes.ELEMENT
   const options = context.options
+  // 如果当前标签不是在v-pre中，也不是自定义标签
   if (!context.inVPre && !options.isCustomElement(tag)) {
+    // 那么先判断有没有is指令
     const hasVIs = props.some(
       p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
     )
     if (options.isNativeTag && !hasVIs) {
+      // 如果不存在is指令，并且不是原生标签，则tagType设置为COMPONENT
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else if (
+      // 如果is存在或者标签是Teleport、Suspense、KeepAlive、BaseTransition
+      // 中的一个、或者标签是内建的Transition、TransitionGroup、或者标签以大写开头、
+      // 或者标签等于'component'，都将tagType设置为COMPONENT
       hasVIs ||
       isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
@@ -342,10 +352,11 @@ function parseTag(
     ) {
       tagType = ElementTypes.COMPONENT
     }
-
+    // 如果tag为slot、则tagType = ElementTypes.SLOT
     if (tag === 'slot') {
       tagType = ElementTypes.SLOT
     } else if (
+      // 如果tag为template、并且存在`if,else,else-if,for,slot`等指令，则tagType = ElementTypes.TEMPLATE
       tag === 'template' &&
       props.some(p => {
         return (
@@ -356,7 +367,7 @@ function parseTag(
       tagType = ElementTypes.TEMPLATE
     }
   }
-
+  // 返回ast对象
   return {
     type: NodeTypes.ELEMENT,
     ns,
@@ -370,3 +381,95 @@ function parseTag(
   }
 }
 ```
+
+通过模板编译生成ast节点的过程其实就是不断遍历模板去匹配标签，并且通过递归编译子节点的过程建立节点的父子关系。
+
+## transform
+
+解析模板生成的ast树并不能直接用于生成渲染函数，而是要经过transform方法遍历所有ast节点，根据
+ast节点的类型来调用不同helper函数，这些helper函数将会对针对特定的ast节点进一步优化，生成可供codegen函数使用的codegenNode，这里就不具体对每一个helper函数展开分析，作为一个例子我们仅分析一下根ast节点的transform过程：
+
+之前在分析patch过程的时候我们说到，Vue3.0现在已经支持在模板写多个根节点了，但是一棵树总是需要一个根节点的，所以Vue会帮你生成一个FRAGMENT节点作为根节点，这个节点不会在真实的DOM中显示出来，这个过程就是在ast树的根节点的transform过程中实现的。
+
+```js
+
+function createRootCodegen(root: RootNode, context: TransformContext) {
+  const { helper } = context
+  const { children } = root
+  const child = children[0]
+  // 当ast树的根节点的子节点只有一个节点
+  if (children.length === 1) {
+    // 并且它是一个element节点
+    if (isSingleElementRoot(root, child) && child.codegenNode) {
+      // 则将该节点标记为block节点
+      const codegenNode = child.codegenNode
+      if (codegenNode.type === NodeTypes.VNODE_CALL) {
+        codegenNode.isBlock = true
+        helper(OPEN_BLOCK)
+        helper(CREATE_BLOCK)
+      }
+      root.codegenNode = codegenNode
+    } else {
+      // - single <slot/>, IfNode, ForNode: already blocks.
+      // - single text node: always patched.
+      // root codegen falls through via genNode()
+      root.codegenNode = child
+    }
+  } else if (children.length > 1) {
+    // 如果子节点存在多个，则生成一个FRAGMENT节点保存在codegenNode属性上
+    root.codegenNode = createVNodeCall(
+      context,
+      helper(FRAGMENT),
+      undefined,
+      root.children,
+      `${PatchFlags.STABLE_FRAGMENT} /* ${
+        PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+      } */`,
+      undefined,
+      undefined,
+      true
+    )
+  } else {
+    // no children = noop. codegen will return null.
+  }
+}
+
+```
+
+可以看到transform的过程就是在ast节点的基础上通过特定的helper函数，这些函数会修改原本ast节点上的属性，并将修改后的节点保存在codegenNode属性上，用于生成渲染函数
+
+## codegen
+
+codegen的过程其实就是拼接字符串，这里截取了genNode函数的部分代码，可以看到通过判断codegenNode上的类型调用不同的函数，这些函数的实现基本上就是根据codegenNode上的内容输出相应的字符串然后拼接到最终的代码字符串上，而整个codegen的过程就是递归的调用genNode函数遍历所有codegenNode，最后再通过new Function来创建渲染函数。
+
+```js
+function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
+  ...
+  switch (node.type) {
+    case NodeTypes.ELEMENT:
+    case NodeTypes.IF:
+    case NodeTypes.FOR:
+      __DEV__ &&
+        assert(
+          node.codegenNode != null,
+          `Codegen node is missing for element/if/for node. ` +
+            `Apply appropriate transforms first.`
+        )
+      genNode(node.codegenNode!, context)
+      break
+    case NodeTypes.TEXT:
+      genText(node, context)
+      break
+    case NodeTypes.COMMENT:
+      genComment(node, context)
+      break
+    case NodeTypes.VNODE_CALL:
+      genVNodeCall(node, context)
+      break
+    ...
+  }
+}
+```
+
+
+
