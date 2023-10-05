@@ -1,5 +1,5 @@
 module.exports = {
-  title: 'VueNextAnalysis',
+  title: 'Vue3 迁移',
   description: 'vue3.x源码分析',
   base: '/vue-next-analysis/',
   themeConfig: {
@@ -7,36 +7,13 @@ module.exports = {
       { text: 'Github', link: 'https://github.com/wuchwuw/vue-next-analysis' }
     ],
     sidebar: [
-      ['/', '写在前面'],
       {
-        title: '响应式原理',
-        collapsable: false,
+        title: '概览',
         sidebarDepth: 1,
         children: [
-          ['/reactivity/reactivity', 'reactive'],
-          ['/reactivity/ref', 'ref'],
-          ['/reactivity/effect', 'effect'],
-          ['/reactivity/computed', 'computed']
-        ]
-      },
-      {
-        title: '运行时',
-        collapsable: false,
-        sidebarDepth: 1,
-        children: [
-          ['/runtime-core/createApp', '创建一个Vue3.x应用'],
-          ['/runtime-core/vnode', 'vnode详解'],
-          ['/runtime-core/patch', 'vnode的patch过程(节点的创建及更新)'],
-          ['/runtime-core/scheduler', '组件、节点的生命周期(scheduler)'],
-          ['/runtime-core/watch', 'watchApi']
-        ]
-      },
-      {
-        title: '编译',
-        collapsable: false,
-        sidebarDepth: 1,
-        children: [
-          ['/compiler/compiler', '模板编译过程']
+          ['/qianyi/one', '迁移流程'],
+          ['/qianyi/tow', '非兼容性变更'],
+          ['/qianyi/three', '转换工具']
         ]
       }
     ]
